@@ -9,13 +9,13 @@ import { useState, useMemo, useRef, createContext, useContext, useEffect } from 
 
 export interface StoreContextType {
   packages: Package[];
-  setPackages: React.Dispatch<React.SetStateAction<Package[]>>;
-  masterActivities: MasterActivity[];
-  setMasterActivities: React.Dispatch<React.SetStateAction<MasterActivity[]>>;
-  masterHotels: MasterHotel[];
-  setMasterHotels: React.Dispatch<React.SetStateAction<MasterHotel[]>>;
-  coupons: Coupon[];
-  setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>;
+    setPackages: React.Dispatch<React.SetStateAction<Package[]>>;
+masterActivities: MasterActivity[];
+setMasterActivities: React.Dispatch<React.SetStateAction<MasterActivity[]>>;
+masterHotels: MasterHotel[];
+setMasterHotels: React.Dispatch<React.SetStateAction<MasterHotel[]>>;
+coupons: Coupon[];
+setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -724,7 +724,7 @@ const MasterActivitiesPage = () => {
     try {
       const res = await fetch("/api/activities?id=" + id, { method: "DELETE" });
       const result = await res.json();
-      
+
       if (result.success) {
         setMasterActivities(p => p.filter(a => a._id !== id));
       } else {
@@ -867,8 +867,8 @@ const MasterHotelsPage = () => {
     const count = usageCount[id] || 0;
 
     if (!window.confirm(
-      count > 0 
-        ? `Used in ${count} package(s). Continue?` 
+      count > 0
+        ? `Used in ${count} package(s). Continue?`
         : "Delete this hotel?"
     )) return;
 
@@ -2410,8 +2410,8 @@ const CouponsPage = () => {
       } else {
         alert("Delete failed: " + (result.message || "Unknown error"));
       }
-    } catch (err) { 
-      console.error(err); 
+    } catch (err) {
+      console.error(err);
       alert("Network error. Delete failed.");
     }
   };
@@ -2493,11 +2493,11 @@ const CouponsPage = () => {
 };
 
 // ─── PACKAGES LISTING ─────────────────────────────────────────────
-const PackagesListing = ({ setPage, setSelectedId }) => {
+const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
   const { packages, setPackages } = useStore();
   const [search, setSearch] = useState("");
   const [bookingModal, setBookingModal] = useState<Package | null>(null);
-  
+
   const filtered = packages.filter(p => !search || p.title?.toLowerCase().includes(search.toLowerCase()) || p.destination?.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -2555,6 +2555,7 @@ const PackagesListing = ({ setPage, setSelectedId }) => {
                       <div className="flex items-center gap-0.5">
                         <button onClick={() => { setSelectedId(pkg.id); setPage("view"); }} className="p-1.5 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors" title="View"><Ic.Eye /></button>
                         <button onClick={() => { setSelectedId(pkg.id); setPage("edit"); }} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Ic.Edit /></button>
+                        <button onClick={() => onDuplicate(pkg)} className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1" title="Duplicate Package"><Ic.Package /></button>
                         <button onClick={async () => { if (!window.confirm("Delete this package?")) return; try { const res = await fetch("/api/packages?id=" + pkg.id, { method: "DELETE" }); const result = await res.json(); if (result.success) setPackages(p => p.filter(x => x.id !== pkg.id)); else alert("Delete failed: " + (result.message || "Unknown error")); } catch { alert("Network error. Delete failed."); } }} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-colors" title="Delete"><Ic.Trash /></button>
                         <button onClick={() => setBookingModal(pkg)} className="ml-2 px-2.5 py-1 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"><Ic.Plus />Book</button>
                       </div>
@@ -2574,6 +2575,41 @@ const PackagesListing = ({ setPage, setSelectedId }) => {
       {bookingModal && (
         <BookingFormModal pkg={bookingModal} onClose={() => setBookingModal(null)} />
       )}
+    </div>
+  );
+};
+
+const DuplicatePackageModal = ({ isOpen, onClose, basePkgId, setBasePkgId, packages, onSubmit }: any) => {
+  const [days, setDays] = useState(5);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900">Duplicate Package</h3>
+          <button onClick={onClose} className="text-gray-400 font-bold hover:text-gray-900">×</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Select Base Package</label>
+            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" value={basePkgId} onChange={e => setBasePkgId(e.target.value)}>
+              <option value="" disabled>Select package to clone...</option>
+              {packages.map((p: any) => <option key={p.id} value={p.id}>{p.title || p.destination}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">New Duration (Days)</label>
+            <input type="number" min="1" max="15" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" value={days} onChange={e => setDays(parseInt(e.target.value))} />
+             <p className="text-[10px] text-gray-500 mt-1">Maximum 15 days allowed.</p>
+          </div>
+        </div>
+        <div className="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+          <button onClick={() => onSubmit(packages.find((p: any) => p.id === basePkgId), days)} className="px-4 py-2 text-sm font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-colors shadow-sm">Clone Package</button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2599,7 +2635,7 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.userName || !form.travelDate) return alert("Name and Travel Date are required.");
-    
+
     setIsSubmitting(true);
     try {
       const payload: Omit<Booking, "id"> = { // Using the Booking type we made earlier
@@ -2624,7 +2660,7 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      
+
       const result = await res.json();
       if (result.success) {
         alert("Booking created successfully!");
@@ -2657,13 +2693,13 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
           <div className="col-span-2 sm:col-span-1"><FL required>Guest Name</FL><Inp required value={form.userName} onChange={e => upd("userName", e.target.value)} placeholder="John Doe" /></div>
           <div className="col-span-2 sm:col-span-1"><FL>Guest Email</FL><Inp type="email" value={form.userEmail} onChange={e => upd("userEmail", e.target.value)} placeholder="john@example.com" /></div>
           <div className="col-span-2 sm:col-span-1"><FL>Guest Phone</FL><Inp type="tel" value={form.userPhone} onChange={e => upd("userPhone", e.target.value)} placeholder="+1 234 567 8900" /></div>
-          
+
           <div className="col-span-2 sm:col-span-1"><FL required>Travel Date</FL><Inp required type="date" value={form.travelDate} onChange={e => upd("travelDate", e.target.value)} /></div>
           <div className="col-span-2 sm:col-span-1"><FL>Return Date</FL><Inp type="date" value={form.returnDate} onChange={e => upd("returnDate", e.target.value)} /></div>
 
           <div className="col-span-2 sm:col-span-1"><FL required>Adults</FL><Inp required type="number" min="1" value={form.adults} onChange={e => upd("adults", e.target.value)} /></div>
           <div className="col-span-2 sm:col-span-1"><FL>Children (under 12)</FL><Inp type="number" min="0" value={form.children} onChange={e => upd("children", e.target.value)} /></div>
-          
+
           <div className="col-span-2"><FL>Special Requests / Notes</FL><TA value={form.notes} onChange={e => upd("notes", e.target.value)} placeholder="Dietary requirements, occasion, etc." /></div>
         </div>
 
@@ -2684,7 +2720,7 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
 
 
 // ─── DASHBOARD ────────────────────────────────────────────────────
-const Dashboard = ({ setPage }) => {
+const Dashboard = ({ setPage, onOpenDuplicateModal }: any) => {
   const { packages, masterActivities, masterHotels } = useStore();
   const totalDays = packages.reduce((s, p) => s + (p.itinerary?.length || 0), 0);
   const linkedActs = packages.reduce((s, p) => s + (p.itinerary?.reduce((sd, d) => sd + (d.activities?.filter(a => a.activityRef).length || 0), 0) || 0), 0);
@@ -2765,12 +2801,12 @@ const Dashboard = ({ setPage }) => {
         <Card className="p-5">
           <h3 className="text-sm font-bold text-gray-800 mb-4">Quick Actions</h3>
           <div className="space-y-2.5">
-            <Btn className="w-full" onClick={() => setPage("create")}><Ic.Plus />Create Package</Btn>
             <Btn variant="secondary" className="w-full" onClick={() => setPage("master-activities")}><Ic.Activity />Manage Activities</Btn>
             <Btn variant="secondary" className="w-full" onClick={() => setPage("master-hotels")}><Ic.Hotel />Manage Hotels</Btn>
+            <Btn variant="secondary" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50" onClick={onOpenDuplicateModal}><Ic.Package />Duplicate Package</Btn>
             <div className="pt-2">
-              <Btn variant="dashed" className="w-full border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => (window as any).handleGlobalSeed()}><Ic.Sync />Seed Global Data</Btn>
-              <p className="text-[10px] text-amber-500 mt-1 text-center font-medium">⚠️ Warning: This will reset all current database data</p>
+              <Btn variant="dashed" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50" onClick={() => (window as any).handleGlobalSeed()}><Ic.Sync />Seed Demo Data (Safe)</Btn>
+              <p className="text-[10px] text-blue-500 mt-1 text-center font-medium">✨ This will NOT delete existing data</p>
             </div>
           </div>
           <div className="mt-5 pt-4 border-t border-gray-100">
@@ -2837,11 +2873,11 @@ const BookingsPage = () => {
       if (result.success) {
         setBookings(prev => prev.filter(b => b.id !== booking.id));
         if (selected?.id === booking.id) setDetailOpen(false);
-      } else { 
-        alert("Delete failed: " + (result.message || "Unknown error")); 
+      } else {
+        alert("Delete failed: " + (result.message || "Unknown error"));
       }
-    } catch (e) { 
-      alert("Network error. Delete failed."); 
+    } catch (e) {
+      alert("Network error. Delete failed.");
     }
   };
 
@@ -2879,9 +2915,9 @@ const BookingsPage = () => {
       <Card className="px-4 py-3 flex items-center gap-3">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, package…" className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, package…" className="w-full pl-9 pr-3 py-2 text-sm text-gray-900 bg-white placeholder:text-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" />
         </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900">
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900">
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
@@ -3090,27 +3126,28 @@ const Topbar = ({ title, subtitle }) => (
 // ─── APP ROOT ─────────────────────────────────────────────────────
 export default function App() {
   const [formData, setFormData] = useState({
-  title: "",
-  destination: "",
-  duration: "",
-  price: {
-    currency: "INR",
-    amount: ""
-  },
-  travelStyle: "",
-  exclusivity: "",
-  shortDescription: "",
-  fullDescription: "",
-  itinerary: [],
-  inclusions: [],
-  exclusions: [],
-  faqs: [],
-  guidelines: [],
-  aboutDestination: "",
-  quickInfo: {},
-  experiencesCovered: [],
-  notToMiss: [],
-});
+    title: "",
+    destination: "",
+    duration: "",
+    price: {
+      currency: "INR",
+      amount: ""
+    },
+    travelStyle: "",
+    exclusivity: "",
+    shortDescription: "",
+    fullDescription: "",
+    itinerary: [],
+    inclusions: [],
+    exclusions: [],
+    faqs: [],
+    guidelines: [],
+    aboutDestination: "",
+    quickInfo: {},
+    experiencesCovered: [],
+    notToMiss: [],
+  });
+  const [duplicatePkgData, setDuplicatePkgData] = useState<any>(null);
   const [page, setPage] = useState("dashboard");
   const [packages, setPackages] = useState<Package[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -3118,17 +3155,17 @@ export default function App() {
   const [masterHotels, setMasterHotels] = useState(INIT_HOTELS);
   const [selectedId, setSelectedId] = useState(null);
   const fetchPackages = async () => {
-  try {
-    const res = await fetch("/api/packages");
-    const result = await res.json();
+    try {
+      const res = await fetch("/api/packages");
+      const result = await res.json();
 
-    if (result.success) {
-      setPackages(result.data);   // backend already normalized
+      if (result.success) {
+        setPackages(result.data);   // backend already normalized
+      }
+    } catch (err) {
+      console.error(err);
     }
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
   useEffect(() => {
     fetchPackages();
@@ -3137,8 +3174,44 @@ export default function App() {
 
   const store = { packages, setPackages, masterActivities, setMasterActivities, masterHotels, setMasterHotels, coupons, setCoupons };
 
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateBasePkgId, setDuplicateBasePkgId] = useState("");
+
+  const handleDuplicateModalSubmit = (basePkg: Package | undefined, days: number) => {
+    if (!basePkg) return alert("Select base package");
+    if (days < 1 || days > 15) return alert("Validation Failed: Duration must be between 1 and 15 days");
+
+    const cloned = JSON.parse(JSON.stringify(basePkg));
+
+    // OVERRIDE: Prevent DB overwrite by vigorously stripping IDs
+    delete cloned._id;
+    delete cloned.id;
+    delete cloned.createdAt;
+    delete cloned.updatedAt;
+
+    cloned.id = uid();
+    cloned.title = (cloned.title || "Untitled") + " (Copy)";
+    cloned.slug = (cloned.slug || cloned.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')) + "-" + Date.now();
+    cloned.tripDuration = `${days} Days / ${days - 1} Nights`;
+    
+    if (!cloned.itinerary) cloned.itinerary = [];
+    const currentLen = cloned.itinerary.length;
+    
+    if (days < currentLen) cloned.itinerary = cloned.itinerary.slice(0, days);
+    else if (days > currentLen) {
+      cloned.itinerary = [
+         ...cloned.itinerary, 
+         ...Array.from({ length: days - currentLen }, (_, i) => makeDay(currentLen + i + 1))
+      ];
+    }
+    
+    setDuplicatePkgData(cloned);
+    setDuplicateModalOpen(false);
+    setPage("create");
+  };
+
   const handleSeed = async () => {
-    if (!confirm("Are you sure? This will delete all current packages, activities, hotels, and bookings to restore initial data.")) return;
+    if (!confirm("Are you sure? This will safely inject demo data. Existing user data will be kept intact.")) return;
     try {
       const res = await fetch("/api/seed", { method: "POST" });
       const result = await res.json();
@@ -3184,104 +3257,107 @@ export default function App() {
   // }
 
   const handleCreate = async (data) => {
-  try {
+    try {
 
-    if (!data.itinerary) {
-      data.itinerary = [];
-    }
+      if (!data.itinerary) {
+        data.itinerary = [];
+      }
 
-    const formattedPackage = {
-      ...data,
+      const formattedPackage = {
+        ...data,
 
-      itinerary: (data.itinerary || []).map((day, index) => ({
-        id: day.id,
-        dayNumber: index + 1,
-        title: day.title,
-        city: day.city,
-        dayType: day.dayType,
-        mealsIncluded: day.mealsIncluded || [],
-        notes: day.notes,
-        description: day.description,
+        itinerary: (data.itinerary || []).map((day, index) => ({
+          id: day.id,
+          dayNumber: index + 1,
+          title: day.title,
+          city: day.city,
+          dayType: day.dayType,
+          mealsIncluded: day.mealsIncluded || [],
+          notes: day.notes,
+          description: day.description,
 
-        hotelStays: (day.hotelStays || []).map((hotel) => ({
-          id: hotel.id,
-          hotelRef: hotel.hotelRef,
-          roomType: hotel.roomType,
-          checkInTime: hotel.checkInTime,
-          checkOutTime: hotel.checkOutTime,
-          mealInclusions: hotel.mealInclusions,
-          notes: hotel.notes,
+          hotelStays: (day.hotelStays || []).map((hotel) => ({
+            id: hotel.id,
+            hotelRef: hotel.hotelRef,
+            roomType: hotel.roomType,
+            checkInTime: hotel.checkInTime,
+            checkOutTime: hotel.checkOutTime,
+            mealInclusions: hotel.mealInclusions,
+            notes: hotel.notes,
+          })),
+
+          activities: (day.activities || []).map((act) => ({
+            id: act.id,
+            activityRef: act.activityRef,
+            time: act.time,
+            coverTitle: act.coverTitle,
+            customTitle: act.customTitle,
+            customDescription: act.customDescription,
+            guideIncluded: act.guideIncluded,
+            ticketIncluded: act.ticketIncluded,
+          })),
+
+          transfers: (day.transfers || []).map((tr) => ({
+            id: tr.id,
+            pickupTime: tr.pickupTime,
+            from: tr.from,
+            to: tr.to,
+            vehicleType: tr.vehicleType,
+          })),
         })),
+      };
 
-        activities: (day.activities || []).map((act) => ({
-          id: act.id,
-          activityRef: act.activityRef,
-          time: act.time,
-          coverTitle: act.coverTitle,
-          customTitle: act.customTitle,
-          customDescription: act.customDescription,
-          guideIncluded: act.guideIncluded,
-          ticketIncluded: act.ticketIncluded,
-        })),
+      const res = await fetch("/api/packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formattedPackage),
+      });
 
-        transfers: (day.transfers || []).map((tr) => ({
-          id: tr.id,
-          pickupTime: tr.pickupTime,
-          from: tr.from,
-          to: tr.to,
-          vehicleType: tr.vehicleType,
-        })),
-      })),
-    };
+      const result = await res.json();
 
-    const res = await fetch("/api/packages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formattedPackage),
-    });
+      if (result.success) {
+        alert("Package saved ✅");
+        fetchPackages();
+        setDuplicatePkgData(null);
+        setPage("packages");
+      } else {
+        alert("Failed to save: " + (result.message || "Unknown error"));
+      }
 
-    const result = await res.json();
-
-    if (result.success) {
-      alert("Package saved ✅");
-      fetchPackages();
-      setPage("packages");
+    } catch (err) {
+      console.error(err);
     }
+  };
+  const handleEdit = async (data) => {
+    try {
+      console.log("EDIT DATA", data);
 
-  } catch (err) {
-    console.error(err);
-  }
-};
- const handleEdit = async (data) => {
-  try {
-    console.log("EDIT DATA", data);
+      const formattedPackage = {
+        ...data,
+        id: selectedId,   // ✅ ensure id is always sent
+      };
 
-    const formattedPackage = {
-      ...data,
-      id: selectedId,   // ✅ ensure id is always sent
-    };
+      const res = await fetch("/api/packages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formattedPackage),
+      });
 
-    const res = await fetch("/api/packages", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formattedPackage),
-    });
+      const result = await res.json();
 
-    const result = await res.json();
+      if (result.success) {
+        alert("Package updated ✅");
+        fetchPackages();
+        setPage("packages");
+      } else {
+        alert("Update failed: " + (result.message || "Unknown error"));
+      }
 
-    if (result.success) {
-      alert("Package updated ✅");
-      fetchPackages();
-      setPage("packages");
-    } else {
-      alert("Update failed: " + (result.message || "Unknown error"));
+    } catch (err) {
+      console.error(err);
+      alert("Update failed due to a network or server error.");
     }
-
-  } catch (err) {
-    console.error(err);
-    alert("Update failed due to a network or server error.");
-  }
-};
+  };
 
   return (
     <StoreContext.Provider value={store}>
@@ -3291,11 +3367,11 @@ export default function App() {
         <main className="ml-60 pt-16 min-h-screen">
           <div className="p-6 max-w-[1400px]">
             {["create", "edit", "view"].includes(page) && (
-              <button onClick={() => setPage("packages")} className="inline-flex items-center gap-1.5 text-sm text-blue-900 font-semibold mb-5 hover:underline"><Ic.Back />Back to Packages</button>
+              <button onClick={() => setPage("packages")} className="inline-flex items-center gap-1.5 text-sm text-blue-900 font-semibold mb-5 hover:underline"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>Back to Packages</button>
             )}
-            {page === "dashboard" && <Dashboard setPage={setPage} />}
-            {page === "packages" && <PackagesListing setPage={setPage} setSelectedId={setSelectedId} />}
-            {page === "create" && <PackageForm initial={emptyPkg()} mode="create" onSave={handleCreate} onCancel={() => setPage("packages")} />}
+            {page === "dashboard" && <Dashboard setPage={setPage} onOpenDuplicateModal={() => { setDuplicateBasePkgId(""); setDuplicateModalOpen(true); }} />}
+            {page === "packages" && <PackagesListing setPage={setPage} setSelectedId={setSelectedId} onDuplicate={(pkg: Package) => { setDuplicateBasePkgId(pkg.id); setDuplicateModalOpen(true); }} />}
+            {page === "create" && <PackageForm initial={duplicatePkgData || emptyPkg()} mode="create" onSave={handleCreate} onCancel={() => { setDuplicatePkgData(null); setPage("packages"); }} />}
             {page === "edit" && selectedPkg && <PackageForm key={selectedPkg.id} initial={selectedPkg} mode="edit" onSave={handleEdit} onCancel={() => setPage("packages")} />}
             {page === "view" && selectedPkg && <ViewPackage pkg={selectedPkg} onEdit={() => setPage("edit")} />}
             {page === "master-activities" && <MasterActivitiesPage />}
@@ -3304,6 +3380,7 @@ export default function App() {
             {page === "bookings" && <BookingsPage />}
           </div>
         </main>
+        <DuplicatePackageModal isOpen={duplicateModalOpen} onClose={() => setDuplicateModalOpen(false)} basePkgId={duplicateBasePkgId} setBasePkgId={setDuplicateBasePkgId} packages={packages} onSubmit={handleDuplicateModalSubmit} />
       </div>
     </StoreContext.Provider>
   );

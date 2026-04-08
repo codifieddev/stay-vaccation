@@ -135,20 +135,26 @@ const INIT_PACKAGES = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-async function replaceCollection(db: Db, collectionName: string, docs: object[]): Promise<void> {
-  await db.collection(collectionName).deleteMany({});
+async function replaceCollection(db: Db, collectionName: string, docs: any[]): Promise<void> {
+  // OVERRIDE: Safe Seeding. Do NOT delete existing data.
+  // await db.collection(collectionName).deleteMany({});
+  
   if (docs.length > 0) {
-    await (db.collection(collectionName) as any).insertMany(docs);
+    for (const doc of docs) {
+      const filter = doc.id ? { id: doc.id } : { _id: doc._id };
+      await db.collection(collectionName).updateOne(
+        filter,
+        { $setOnInsert: { ...doc, isSeeded: true } },
+        { upsert: true }
+      );
+    }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-async function main(): Promise<void> {
-  const client = new MongoClient(MONGODB_URI as string);
-
+export async function POST() {
+  let client;
   try {
+    client = new MongoClient(MONGODB_URI as string);
     await client.connect();
     const db = client.db(MONGODB_DB as string);
 
@@ -158,27 +164,11 @@ async function main(): Promise<void> {
     await replaceCollection(db, "coupons", []);
     await replaceCollection(db, "bookings", []);
 
-    console.log("Seed completed successfully.");
-    console.log(
-      JSON.stringify(
-        {
-          activity: INIT_ACTIVITIES.length,
-          hotels: INIT_HOTELS.length,
-          packages: INIT_PACKAGES.length,
-          coupons: 0,
-          bookings: 0,
-        },
-        null,
-        2
-      )
-    );
+    return Response.json({ success: true, message: "Safe seeded successfully" });
+  } catch (error: any) {
+    console.error("Seed error:", error);
+    return Response.json({ success: false, message: error.message }, { status: 500 });
   } finally {
-    await client.close();
+    if (client) await client.close();
   }
 }
-
-main().catch((error) => {
-  console.error("Seed script failed:");
-  console.error(error);
-  process.exit(1);
-});

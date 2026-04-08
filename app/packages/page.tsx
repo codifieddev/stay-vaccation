@@ -49,7 +49,7 @@ function PackagesContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/packages")
+    fetch("/api/packages", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (d.success) setPackages(d.data); })
       .finally(() => setLoading(false));

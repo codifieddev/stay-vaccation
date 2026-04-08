@@ -9,30 +9,41 @@ export async function POST(req: NextRequest) {
     const bodyRaw = await req.json();
     const { id, _id, ...body } = bodyRaw; // Remove client-generated IDs
 
-    console.log(body)
+    console.log("[SERVER] Creating new package:", body.title);
 
     if (!body.title || !Array.isArray(body.itinerary)) {
-  return NextResponse.json(
-    { message: "Invalid package data", success: false },
-    { status: 400 }
-  );
-}
+      return NextResponse.json(
+        { message: "Invalid package data", success: false },
+        { status: 400 }
+      );
+    }
+
+    if (body.itinerary.length < 1 || body.itinerary.length > 15) {
+      return NextResponse.json(
+        { message: "Duration validation failed: Package must be between 1 and 15 days.", success: false },
+        { status: 400 }
+      );
+    }
 
     const db = await getDatabase();
     const collection = db.collection("packages");
+
+    const safeObjectId = (ref: any) => {
+      if (!ref) return null;
+      const str = typeof ref === 'string' ? ref : ref.toString();
+      return ObjectId.isValid(str) ? new ObjectId(str) : null;
+    };
 
     //  Clean itinerary safely
     const cleanedItinerary = body.itinerary.map((day: any) => ({
       ...day,
       hotelStays: day.hotelStays?.map((h: any) => ({
         ...h,
-        hotelRef: h.hotelRef ? new ObjectId(h.hotelRef) : null,
+        hotelRef: safeObjectId(h.hotelRef),
       })) || [],
       activities: day.activities?.map((a: any) => ({
         ...a,
-        activityRef: a.activityRef
-          ? new ObjectId(a.activityRef)
-          : null,
+        activityRef: safeObjectId(a.activityRef),
       })) || [],
     }));
 
@@ -170,18 +181,22 @@ export async function PUT(req: NextRequest) {
     const db = await getDatabase();
     const collection = db.collection("packages");
 
+    const safeObjectId = (ref: any) => {
+      if (!ref) return null;
+      const str = typeof ref === 'string' ? ref : ref.toString();
+      return ObjectId.isValid(str) ? new ObjectId(str) : null;
+    };
+
     // Clean itinerary (same as POST)
     const cleanedItinerary = (body.itinerary || []).map((day: any) => ({
       ...day,
       hotelStays: day.hotelStays?.map((h: any) => ({
         ...h,
-        hotelRef: h.hotelRef ? new ObjectId(h.hotelRef) : null,
+        hotelRef: safeObjectId(h.hotelRef),
       })) || [],
       activities: day.activities?.map((a: any) => ({
         ...a,
-        activityRef: a.activityRef
-          ? new ObjectId(a.activityRef)
-          : null,
+        activityRef: safeObjectId(a.activityRef),
       })) || [],
     }));
 

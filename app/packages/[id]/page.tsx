@@ -29,9 +29,14 @@ function fmt12(t: string) {
   return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
 
+import { useParams } from "next/navigation";
+
 const TABS = ["Overview", "Itinerary", "Inclusions", "Policies & FAQs"];
 
-export default function SinglePackagePage({ params }: { params: { id: string } }) {
+export default function SinglePackagePage() {
+  const params = useParams();
+  const matchedId = params?.id as string;
+
   const [pkg, setPkg] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Overview");
@@ -45,16 +50,19 @@ export default function SinglePackagePage({ params }: { params: { id: string } }
   const tabBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/packages")
+    if (!matchedId) return;
+    fetch("/api/packages", { cache: "no-store" })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
-          const found = d.data.find((p: any) => p.id === params.id);
+          console.log("PACKAGE IDS:", d.data.map((p:any) => p.id), "LOOKING FOR:", matchedId);
+          // Try matching ID, or fallback to slug if the URL was a slug
+          const found = d.data.find((p: any) => String(p.id) === String(matchedId) || String(p.slug) === String(matchedId));
           setPkg(found || null);
         }
       })
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [matchedId]);
 
   const toggleDay = (i: number) => {
     setOpenDays(prev => {

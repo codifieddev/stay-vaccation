@@ -5,6 +5,8 @@ export const metadata = {
   description: "View complete details of a travel package.",
 };
 
-export default function ViewPackagePage({ params }: { params: { id: string } }) {
-  return <ViewPackageContent id={params.id} />;
+// Next.js 15+: params is a Promise — must be an async server component
+export default async function ViewPackagePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ViewPackageContent id={id} />;
 }

@@ -3,6 +3,7 @@ import Footer from "./components/frontend/Footer";
 import PackageCard from "./components/frontend/PackageCard";
 import SearchBar from "./components/frontend/SearchBar";
 import Link from "next/link";
+import { getAllDestinations } from "./utils/getDestinations";
 
 async function getPackages() {
   try {
@@ -35,8 +36,21 @@ const HIGHLIGHTS = [
 ];
 
 export default async function HomePage() {
-  const packages = await getPackages();
+  const [packages, destinations] = await Promise.all([
+    getPackages(),
+    getAllDestinations()
+  ]);
   const featured = packages.slice(0, 6);
+  // Default destinations if none exist in DB yet
+  const displayDestinations = destinations.length > 0 
+    ? destinations.slice(0, 5) 
+    : [
+        { name: "Bali", slug: "bali", icon: "🌴" },
+        { name: "Rajasthan", slug: "rajasthan", icon: "🏰" },
+        { name: "Maldives", slug: "maldives", icon: "🌊" },
+        { name: "Dubai", slug: "dubai", icon: "🌆" },
+        { name: "Himachal", slug: "himachal", icon: "🏔️" }
+      ];
 
   return (
     <>
@@ -203,16 +217,16 @@ export default async function HomePage() {
             <h2 className="font-display text-4xl md:text-5xl font-bold text-white">Popular Destinations</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {["Bali", "Rajasthan", "Maldives", "Dubai", "Himachal"].map((dest, i) => (
+            {displayDestinations.map((dest, i) => (
               <Link
-                key={dest}
-                href={`/locations?q=${dest}`}
+                key={dest.slug}
+                href={`/activities/${dest.slug}`}
                 className="group text-center p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#2fa3f2]/50 transition-all duration-200 hover:-translate-y-1"
               >
                 <div className="text-3xl mb-3">
-                  {["🌴", "🏰", "🌊", "🌆", "🏔️"][i]}
+                  {(dest as any).icon || "📍"}
                 </div>
-                <p className="text-white font-semibold text-sm group-hover:text-[#2fa3f2] transition-colors">{dest}</p>
+                <p className="text-white font-semibold text-sm group-hover:text-[#2fa3f2] transition-colors">{dest.name}</p>
               </Link>
             ))}
           </div>

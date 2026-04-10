@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "../../utils/getDatabase";
 import { ObjectId } from "mongodb";
 
-// CREATE ACTIVITY
+// CREATE DESTINATION
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const db = await getDatabase();
 
-    const { _id, id, ...insertData } = body;
+    const { _id, ...insertData } = body;
 
-    const result = await db.collection("activity").insertOne({
+    const result = await db.collection("destinations").insertOne({
       ...insertData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -22,36 +22,22 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("DESTINATION POST ERROR:", err);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
 
 export const dynamic = "force-dynamic";
 
-// GET ALL ACTIVITIES
-export async function GET(req: NextRequest) {
+// GET ALL DESTINATIONS
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const destination = searchParams.get("destination");
-    
     const db = await getDatabase();
-    let query = {};
-    
-    if (destination) {
-      query = { 
-        $or: [
-          { destinationSlug: destination },
-          { location: { $regex: destination, $options: "i" } }
-        ]
-      };
-    }
+    const destinations = await db.collection("destinations").find().toArray();
 
-    const activities = await db.collection("activity").find(query).toArray();
-
-    const normalized = activities.map(a => ({
-      ...a,
-      _id: a._id.toString(),
+    const normalized = destinations.map(d => ({
+      ...d,
+      _id: d._id.toString(),
     }));
 
     return NextResponse.json({ success: true, data: normalized }, {
@@ -61,12 +47,12 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("DESTINATION GET ERROR:", err);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
 
-// UPDATE ACTIVITY
+// UPDATE DESTINATION
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
@@ -75,7 +61,7 @@ export async function PUT(req: NextRequest) {
     const { _id, ...updateData } = body;
     const queryId = /^[0-9a-fA-F]{24}$/.test(_id) ? new ObjectId(_id) : _id;
 
-    await db.collection("activity").updateOne(
+    await db.collection("destinations").updateOne(
       { _id: queryId as any },
       {
         $set: {
@@ -88,12 +74,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (err) {
-    console.error(err);
+    console.error("DESTINATION PUT ERROR:", err);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
 
-// DELETE ACTIVITY
+// DELETE DESTINATION
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -107,18 +93,18 @@ export async function DELETE(req: NextRequest) {
     
     const queryId = /^[0-9a-fA-F]{24}$/.test(id) ? new ObjectId(id) : id;
 
-    const result = await db.collection("activity").deleteOne({
+    const result = await db.collection("destinations").deleteOne({
       _id: queryId as any,
     });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ success: false, message: "Activity not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Destination not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: "Activity deleted successfully" }, { status: 200 });
+    return NextResponse.json({ success: true, message: "Destination deleted successfully" }, { status: 200 });
 
   } catch (err) {
-    console.error("ACTIVITY DELETE ERROR:", err);
+    console.error("DESTINATION DELETE ERROR:", err);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }

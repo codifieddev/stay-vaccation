@@ -5,6 +5,8 @@ export const metadata = {
   description: "Modify an existing transfer route or pricing.",
 };
 
-export default function EditTransferPage({ params }: { params: { id: string } }) {
-  return <EditTransferContent id={params.id} />;
+// Next.js 15+: params is a Promise — must be an async server component
+export default async function EditTransferPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <EditTransferContent id={id} />;
 }

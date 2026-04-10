@@ -51,18 +51,14 @@ export default function SinglePackagePage() {
 
   useEffect(() => {
     if (!matchedId) return;
-    fetch("/api/packages", { cache: "no-store" })
+    // Fetch the specific package directly by its MongoDB ObjectId — never loads wrong one
+    fetch(`/api/packages?id=${encodeURIComponent(matchedId)}`, { cache: "no-store" })
       .then(r => r.json())
       .then(d => {
-        if (d.success && Array.isArray(d.data)) {
-          // Robust matching: Check case-insensitive ID or Slug
-          const found = d.data.find((p: any) => {
-            const pid = String(p.id || "").toLowerCase();
-            const pslug = String(p.slug || "").toLowerCase();
-            const target = String(matchedId).toLowerCase();
-            return pid === target || pslug === target;
-          });
-          setPkg(found || null);
+        if (d.success && d.data) {
+          setPkg(d.data);
+        } else {
+          setPkg(null);
         }
       })
       .finally(() => setLoading(false));

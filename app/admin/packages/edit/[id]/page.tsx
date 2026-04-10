@@ -5,6 +5,8 @@ export const metadata = {
   description: "Modify an existing travel package details and itinerary.",
 };
 
-export default function EditPackagePage({ params }: { params: { id: string } }) {
-  return <EditPackageContent id={params.id} />;
+// Next.js 15+: params is a Promise — must be an async server component
+export default async function EditPackagePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <EditPackageContent id={id} />;
 }

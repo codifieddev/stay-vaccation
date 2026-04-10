@@ -1,29 +1,18 @@
-async function checkDeletes() {
-  const { MongoClient } = require('mongodb');
-  require('dotenv').config();
-  const uri = process.env.MONGODB_URI;
+const { MongoClient } = require('mongodb');
+require('dotenv').config({ path: '.env.local' });
+
+async function main() {
+  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
   const client = new MongoClient(uri);
   try {
     await client.connect();
-    const db = client.db(process.env.MONGODB_DB);
-    const hotels = await db.collection('hotels').find().toArray();
-    console.log("Hotels in DB:", hotels.map(h => ({ _id: h._id, type: typeof h._id, isObjectId: typeof h._id === 'object' })));
-    
-    // Testing delete query
-    if(hotels.length > 0) {
-      const h = hotels[0];
-      const idString = h._id.toString();
-      const queryIds = [idString];
-      if (/^[0-9a-fA-F]{24}$/.test(idString)) {
-        const { ObjectId } = require('mongodb');
-        queryIds.push(new ObjectId(idString));
-      }
-      
-      const count = await db.collection('hotels').countDocuments({ _id: { $in: queryIds } });
-      console.log(`Document matches for ID ${idString}: ${count}`);
-    }
+    const db = client.db("tours_travel");
+    const pkgs = await db.collection("packages").find({}, { projection: { title: 1, slug: 1, _id: 1, tripDuration: 1, id: 1 } }).toArray();
+    console.log(JSON.stringify(pkgs, null, 2));
+  } catch(e) {
+    console.error(e);
   } finally {
     await client.close();
   }
 }
-checkDeletes();
+main();

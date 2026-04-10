@@ -25,6 +25,8 @@ export default function Navbar() {
   const [authChecked, setAuthChecked] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [activitiesPages, setActivitiesPages] = useState<{slug: string, city: string}[]>([]);
+  const [activitiesMenuOpen, setActivitiesMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -46,6 +48,13 @@ export default function Navbar() {
         setAuthChecked(true);
       })
       .catch(() => { setUser(null); setAuthChecked(true); });
+
+    fetch("/api/activity-pages")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) setActivitiesPages(d.data);
+      })
+      .catch(e => console.error("NAV FETCH ERROR", e));
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -88,10 +97,10 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Nav Links */}
             <nav className="hidden md:flex items-center gap-1">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
+                if (link.label === "Activities") return null; // Handle separately
                 return (
                   <Link key={link.href} href={link.href}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -101,6 +110,34 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* Dynamic Activities Dropdown */}
+              <div className="relative" onMouseEnter={() => setActivitiesMenuOpen(true)} onMouseLeave={() => setActivitiesMenuOpen(false)}>
+                <button
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 ${
+                    pathname.startsWith("/activities") ? "bg-[#2fa3f2]/20 text-[#2fa3f2]" : "text-white/80 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  Activities
+                  <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${activitiesMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                {activitiesMenuOpen && (
+                  <div className="absolute left-0 top-full pt-2 w-64 z-50">
+                    <div className="bg-[#1a3f4e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 backdrop-blur-xl">
+                      {activitiesPages.length > 0 ? (
+                        activitiesPages.map(p => (
+                          <Link key={p.slug} href={`/activities/${p.slug}`} className="block px-5 py-2.5 text-sm text-white/80 hover:bg-[#2fa3f2] hover:text-white transition-colors">
+                            Things to do in {p.city}
+                          </Link>
+                        ))
+                      ) : (
+                        <div className="px-5 py-2.5 text-xs text-white/40 italic">Explore global cities...</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* Right side: Explore + Auth */}

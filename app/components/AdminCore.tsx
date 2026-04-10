@@ -19,6 +19,10 @@ export interface StoreContextType {
   setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>;
   transfers: TransferRecord[];
   setTransfers: React.Dispatch<React.SetStateAction<TransferRecord[]>>;
+  destinations: Destination[];
+  setDestinations: React.Dispatch<React.SetStateAction<Destination[]>>;
+  activityPages: ActivityPage[];
+  setActivityPages: React.Dispatch<React.SetStateAction<ActivityPage[]>>;
 }
 
 export const StoreContext = createContext<StoreContextType | null>(null);
@@ -37,14 +41,14 @@ export const getCurrSym = (code) => ({ INR: "₹", USD: "$", EUR: "€", GBP: "�
 const parseDays = (dur) => { const m = dur?.match(/^(\d+)\s*Day/i); return m ? parseInt(m[1]) : 0; };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────
-const DURATION_OPTIONS = [
-  "2 Days / 1 Night", "3 Days / 2 Nights", "4 Days / 3 Nights",
-  "5 Days / 4 Nights", "6 Days / 5 Nights", "7 Days / 6 Nights",
-  "8 Days / 7 Nights", "10 Days / 9 Nights", "12 Days / 11 Nights",
-  "14 Days / 13 Nights", "15 Days / 14 Nights",
-];
+const DURATION_OPTIONS = Array.from({ length: 15 }, (_, i) => {
+  const d = i + 1;
+  const n = i;
+  if (d === 1) return "1 Day";
+  return `${d} Days / ${n} Night${n === 1 ? '' : 's'}`;
+});
 const OPTIONS = {
-  activityType: ["meal", "sightseeing", "adventure", "transfer", "leisure", "wellness", "shopping"],
+  activityType: ["sightseeing", "adventure", "water sports", "cultural", "nature", "leisure", "food", "photography", "shopping", "attraction", "tour", "mountain", "beach"],
   dayType: ["arrival", "sightseeing", "transfer", "leisure", "departure"],
   starRating: ["1", "2", "3", "4", "5"],
   roomType: ["Deluxe Room", "Superior Room", "Suite", "Junior Suite", "Sea View Room", "Pool Villa", "Cottage", "Penthouse"],
@@ -101,8 +105,55 @@ export interface MasterActivity {
   activityType: string;
   defaultDuration: string;
   location: string;
+  state?: string;
+  country?: string;
+  price?: number;
+  discountPrice?: number;
+  rating?: number;
+  highlights?: string[];
+  isEnabled?: boolean;
+  destinationSlug?: string;
   tags: string[];
   images: string[];
+}
+
+export interface ActivitiesPageActivity {
+  title: string;
+  image: string;
+  duration: string;
+  price: string | number;
+  rating: string | number;
+}
+
+export interface ActivitiesPageReview {
+  name: string;
+  rating: number;
+  comment: string;
+  image: string;
+}
+
+export interface ActivityPage {
+  _id?: string;
+  slug: string;
+  city: string;
+  heroImages: string[];
+  description: {
+    short: string;
+    full: string;
+  };
+  activities: ActivitiesPageActivity[];
+  faqs: Faq[]; 
+  reviews: ActivitiesPageReview[];
+  updatedAt?: string;
+}
+
+export interface Destination {
+  _id: string;
+  name: string;
+  slug: string;
+  image: string;
+  description: string;
+  isEnabled: boolean;
 }
 
 export interface MasterHotel {
@@ -145,13 +196,14 @@ export interface DayHotel {
 
 export interface Transfer {
   id: string;
-  transferRef: string | null;
+  source: "custom" | "existing";
+  transferId: string | null;
   transferType: string;
   vehicleType: string;
   from: string;
   to: string;
-  pickupTime: string;
-  dropTime: string;
+  startTime: string;
+  endTime: string;
   notes: string;
 }
 
@@ -182,6 +234,7 @@ export interface ItineraryDay {
 
 export interface Package {
   id: string;
+  slug?: string;
   title: string;
   destination: string;
   tripDuration: string;
@@ -256,6 +309,8 @@ export interface TransferRecord {
   price: number;
   currency: string;
   duration?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
 }
 
 // ─── FACTORIES ────────────────────────────────────────────────────
@@ -263,7 +318,7 @@ const emptyMasterActivity = (): MasterActivity => ({ _id: uid(), title: "", desc
 const emptyMasterHotel = (): MasterHotel => ({ _id: uid(), hotelName: "", city: "", starRating: "5", description: "", roomTypes: [], amenities: [], images: [] });
 const emptyDayActivity = (): DayActivity => ({ id: uid(), activityRef: null, time: "09:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: false, ticketIncluded: false, coverTitle: "" });
 const emptyDayHotel = (): DayHotel => ({ id: uid(), hotelRef: null, customRoomType: "", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: false, lunch: false, dinner: false } });
-const emptyTransfer = (): Transfer => ({ id: uid(), transferRef: null, transferType: "Private", vehicleType: "Sedan", from: "", to: "", pickupTime: "08:00", dropTime: "10:00", notes: "" });
+const emptyTransfer = (): Transfer => ({ id: uid(), source: "custom", transferId: null, transferType: "Private", vehicleType: "Sedan", from: "", to: "", startTime: "08:00", endTime: "10:00", notes: "" });
 const emptyFaq = (): Faq => ({ id: uid(), question: "", answer: "" });
 const emptyKBYG = (): KBYG => ({ id: uid(), point: "" });
 const emptyAdditionalInfo = () => ({ aboutDestination: "", quickInfo: { destinationsCovered: "", duration: "", startPoint: "", endPoint: "" }, experiencesCovered: [], notToMiss: [] });
@@ -298,13 +353,14 @@ const resolveHotel = (dayHotel: DayHotel, masters: MasterHotel[]) => {
 
 
 const resolveTransfer = (dayTr: Transfer, masters: TransferRecord[]) => {
-  const m = masters.find(x => x._id === dayTr.transferRef);
+  const m = masters.find(x => x._id === dayTr.transferId);
   return {
     ...m, ...dayTr,
     from: dayTr.from || m?.pickupLocation || "",
     to: dayTr.to || m?.dropLocation || "",
     vehicleType: dayTr.vehicleType || m?.vehicleType || "Sedan",
     isLinked: !!m,
+    isExistingSource: dayTr.source === "existing"
   };
 };
 
@@ -351,13 +407,13 @@ const INIT_PACKAGES: Package[] = [
       {
         id: "d1", dayNumber: 1, title: "Arrival & Welcome", city: "Seminyak", dayType: "arrival", mealsIncluded: ["Dinner"], notes: "Private airport transfer included.", description: "",
         hotelStays: [{ id: "dh1", hotelRef: "mh-001", customRoomType: "Private Pool Villa", checkInTime: "15:00", checkOutTime: "11:00", customNotes: "Welcome fruit basket.", customImages: [], mealInclusions: { breakfast: true, lunch: false, dinner: true } }],
-        transfers: [{ id: "dt1", transferRef: null, transferType: "Private", vehicleType: "SUV", from: "Ngurah Rai Airport", to: "Seminyak", pickupTime: "14:00", dropTime: "15:00", notes: "Name board at arrivals." }],
+        transfers: [{ id: "dt1", source: "custom", transferId: null, transferType: "Private", vehicleType: "SUV", from: "Ngurah Rai Airport", to: "Seminyak", startTime: "14:00", endTime: "15:00", notes: "Name board at arrivals." }],
         activities: [{ id: "da1", activityRef: "ma-002", time: "06:30", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: false, coverTitle: "Start your day right" }]
       },
       {
         id: "d2", dayNumber: 2, title: "Temples & Rice Terraces", city: "Ubud", dayType: "sightseeing", mealsIncluded: ["Breakfast", "Lunch"], notes: "Wear modest clothing.", description: "",
         hotelStays: [{ id: "dh2", hotelRef: "mh-003", customRoomType: "Uma Suite", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: true, lunch: true, dinner: false } }],
-        transfers: [{ id: "dt2", transferRef: null, transferType: "Private", vehicleType: "Sedan", from: "Seminyak", to: "Ubud", pickupTime: "08:00", dropTime: "09:00", notes: "" }],
+        transfers: [{ id: "dt2", source: "custom", transferId: null, transferType: "Private", vehicleType: "Sedan", from: "Seminyak", to: "Ubud", startTime: "08:00", endTime: "09:00", notes: "" }],
         activities: [
           { id: "da2", activityRef: "ma-003", time: "09:30", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: true, coverTitle: "" },
           { id: "da3", activityRef: "ma-004", time: "14:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: false, ticketIncluded: false, coverTitle: "" },
@@ -367,12 +423,12 @@ const INIT_PACKAGES: Package[] = [
       {
         id: "d4", dayNumber: 4, title: "Island Adventure", city: "Nusa Penida", dayType: "sightseeing", mealsIncluded: ["Breakfast", "Lunch"], notes: "Speedboat at 7:30 AM.", description: "",
         hotelStays: [{ id: "dh4", hotelRef: "mh-001", customRoomType: "", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: true, lunch: false, dinner: false } }],
-        transfers: [{ id: "dt3", transferRef: null, transferType: "Private", vehicleType: "Speedboat", from: "Sanur Beach", to: "Nusa Penida", pickupTime: "07:30", dropTime: "08:15", notes: "" }],
+        transfers: [{ id: "dt3", source: "custom", transferId: null, transferType: "Private", vehicleType: "Speedboat", from: "Sanur Beach", to: "Nusa Penida", startTime: "07:30", endTime: "08:15", notes: "" }],
         activities: [{ id: "da4", activityRef: "ma-003", time: "09:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: true, coverTitle: "Jaw-dropping vistas" }]
       },
       {
         id: "d5", dayNumber: 5, title: "Departure", city: "Denpasar", dayType: "departure", mealsIncluded: ["Breakfast"], notes: "Check-out 11 AM.", description: "",
-        hotelStays: [], transfers: [{ id: "dt4", transferRef: null, transferType: "Private", vehicleType: "SUV", from: "Seminyak", to: "Airport", pickupTime: "12:30", dropTime: "13:15", notes: "" }], activities: []
+        hotelStays: [], transfers: [{ id: "dt4", source: "custom", transferId: null, transferType: "Private", vehicleType: "SUV", from: "Seminyak", to: "Airport", startTime: "12:30", endTime: "13:15", notes: "" }], activities: []
       },
     ],
     createdAt: "2025-01-15",
@@ -389,11 +445,15 @@ export const Inp = ({ className = "", ...p }: React.InputHTMLAttributes<HTMLInpu
 const TA = ({ className = "", rows = 3, ...p }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea rows={rows} className={cls("w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 placeholder:text-gray-400 transition-all resize-none", className)} {...p} />
 );
-export const Sel = ({ options, placeholder, value, onChange, className = "" }: { options: string[]; placeholder?: string; value?: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; className?: string }) => (
+export const Sel = ({ options, placeholder, value, onChange, className = "" }: { options: (string | { label: string; value: string })[]; placeholder?: string; value?: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; className?: string }) => (
   <select value={value || ""} onChange={onChange}
     className={cls("w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all cursor-pointer", !value ? "text-gray-400" : "text-gray-900", className)}>
     {placeholder && <option value="" disabled>{placeholder}</option>}
-    {options.map(o => <option key={o} value={o}>{o}</option>)}
+    {options.map(o => {
+      const label = typeof o === "string" ? o : o.label;
+      const val = typeof o === "string" ? o : o.value;
+      return <option key={val} value={val}>{label}</option>;
+    })}
   </select>
 );
 export const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => <div className={cls("bg-white rounded-xl border border-gray-100 shadow-sm", className)}>{children}</div>;
@@ -574,23 +634,78 @@ export const ImageUploader = ({ images = [], onAdd, onRemove, label = "Images" }
 
 // ─── MASTER ACTIVITY FORM ─────────────────────────────────────────
 const MasterActivityForm = ({ initial, onSave, onClose }) => {
+  const { destinations } = useStore();
   const [form, setForm] = useState(initial || emptyMasterActivity());
   const [tagIn, setTagIn] = useState("");
+  const [highIn, setHighIn] = useState("");
 
   useEffect(() => {
     setForm(initial || emptyMasterActivity());
   }, [initial]);
 
   const upd = (f, v) => setForm(p => ({ ...p, [f]: v }));
+  
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto custom-scrollbar">
       <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2"><FL required>Activity Title</FL><Inp placeholder="e.g. Amber Fort Guided Tour" value={form.title} onChange={e => upd("title", e.target.value)} /></div>
+        <div className="col-span-2">
+          <FL required>Activity Title</FL>
+          <Inp placeholder="e.g. Amber Fort Guided Tour" value={form.title} onChange={e => upd("title", e.target.value)} />
+        </div>
+        
+        <div>
+          <FL>Destination Link</FL>
+          <Sel 
+            placeholder="Link to destination…" 
+            options={destinations.map(d => ({ label: d.name, value: d.slug }))} 
+            value={form.destinationSlug || ""} 
+            onChange={e => upd("destinationSlug", e.target.value)} 
+          />
+        </div>
+        
         <div><FL>Activity Type</FL><Sel options={OPTIONS.activityType} value={form.activityType} onChange={e => upd("activityType", e.target.value)} /></div>
+        
+        <div><FL>State</FL><Inp placeholder="e.g. Rajasthan" value={form.state || ""} onChange={e => upd("state", e.target.value)} /></div>
+        <div><FL>Country</FL><Inp placeholder="e.g. India" value={form.country || ""} onChange={e => upd("country", e.target.value)} /></div>
+        
         <div><FL>Default Duration</FL><Inp placeholder="e.g. 2 hrs" value={form.defaultDuration} onChange={e => upd("defaultDuration", e.target.value)} /></div>
-        <div className="col-span-2"><FL>Location</FL><Inp placeholder="e.g. Jaipur, Rajasthan" value={form.location} onChange={e => upd("location", e.target.value)} /></div>
+        <div>
+          <FL>Rating (1-5)</FL>
+          <Inp type="number" min="1" max="5" step="0.1" value={form.rating || ""} onChange={e => upd("rating", parseFloat(e.target.value))} />
+        </div>
+
+        <div className="col-span-2"><FL>Location / Address</FL><Inp placeholder="e.g. Jaipur, Rajasthan" value={form.location} onChange={e => upd("location", e.target.value)} /></div>
+
+        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 col-span-2 grid grid-cols-2 gap-4">
+          <div>
+            <FL>Base Price ({getCurrSym("INR")})</FL>
+            <Inp type="number" value={form.price || ""} onChange={e => upd("price", parseFloat(e.target.value))} />
+          </div>
+          <div>
+            <FL>Discounted Price</FL>
+            <Inp type="number" value={form.discountPrice || ""} onChange={e => upd("discountPrice", parseFloat(e.target.value))} />
+          </div>
+        </div>
+
         <div className="col-span-2"><FL>Description</FL><TA placeholder="Full description…" value={form.description} onChange={e => upd("description", e.target.value)} rows={3} /></div>
       </div>
+
+      <div>
+        <FL optional>Highlights (Key points)</FL>
+        <div className="flex gap-2 mb-2">
+          <Inp placeholder="e.g. Expert guided tour" value={highIn} onChange={e => setHighIn(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && highIn.trim()) { e.preventDefault(); upd("highlights", [...(form.highlights || []), highIn.trim()]); setHighIn(""); } }} />
+          <Btn variant="outline" size="sm" onClick={() => { if (highIn.trim()) { upd("highlights", [...(form.highlights || []), highIn.trim()]); setHighIn(""); } }}>Add</Btn>
+        </div>
+        <div className="space-y-1.5">
+          {(form.highlights || []).map((h, i) => (
+            <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-medium border border-gray-200">
+              <span className="flex-1 line-clamp-1">{h}</span>
+              <button onClick={() => upd("highlights", form.highlights.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500"><Ic.X /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div>
         <FL optional>Tags</FL>
         <div className="flex gap-2 mb-2">
@@ -600,15 +715,27 @@ const MasterActivityForm = ({ initial, onSave, onClose }) => {
         <div className="flex flex-wrap gap-1.5">
           {form.tags.map((tag, i) => (
             <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-800 rounded-lg text-xs font-medium border border-blue-200">
-              <Ic.Tag />{tag}<button onClick={() => upd("tags", form.tags.filter((_, j) => j !== i))} className="text-blue-400 hover:text-red-500 ml-0.5"><Ic.X /></button>
+              <Ic.Tag />{tag}
+              <button onClick={() => upd("tags", form.tags.filter((_, j) => j !== i))} className="text-blue-400 hover:text-red-500 ml-0.5"><Ic.X /></button>
             </span>
           ))}
         </div>
       </div>
+
       <ImageUploader images={form.images} onAdd={url => upd("images", [...form.images, url])} onRemove={i => upd("images", form.images.filter((_, j) => j !== i))} />
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-        <Btn variant="outline" onClick={onClose}>Cancel</Btn>
-        <Btn variant="success" onClick={() => { if (form.title.trim()) onSave(form); }}>Save Activity</Btn>
+      
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className={cls("w-10 h-5 rounded-full relative transition-all", form.isEnabled !== false ? "bg-emerald-500" : "bg-gray-300")}>
+            <div className={cls("absolute top-1 w-3 h-3 bg-white rounded-full transition-all", form.isEnabled !== false ? "right-1" : "left-1")} />
+          </div>
+          <input type="checkbox" className="sr-only" checked={form.isEnabled !== false} onChange={e => upd("isEnabled", e.target.checked)} />
+          <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">Enabled for Frontend</span>
+        </label>
+        <div className="flex gap-3">
+          <Btn variant="outline" onClick={onClose}>Cancel</Btn>
+          <Btn variant="success" onClick={() => { if (form.title.trim()) onSave(form); }}>Save Activity</Btn>
+        </div>
       </div>
     </div>
   );
@@ -668,6 +795,214 @@ const MasterHotelForm = ({ initial, onSave, onClose }) => {
         <Btn variant="outline" onClick={onClose}>Cancel</Btn>
         <Btn variant="success" onClick={() => { if (form.hotelName.trim()) onSave(form); }}>Save Hotel</Btn>
       </div>
+    </div>
+  );
+};
+
+// ─── ACTIVITY PAGE FORM ───────────────────────────────────────────
+export const ActivityPageForm = ({ initial, onSave, onClose }: { initial: any; onSave: (d: any) => void; onClose: () => void }) => {
+  const [data, setData] = useState<ActivityPage>(initial || {
+    slug: "", city: "", heroImages: [], 
+    description: { short: "", full: "" },
+    activities: [], faqs: [], reviews: []
+  });
+
+  const upd = (f: string, v: any) => setData(p => ({ ...p, [f]: v }));
+  const updDesc = (f: string, v: string) => setData(p => ({ ...p, description: { ...p.description, [f]: v } }));
+
+  const addActivity = () => upd("activities", [...data.activities, { title: "", image: "", duration: "", price: "", rating: "" }]);
+  const updActivity = (i: number, f: string, v: any) => {
+    const next = [...data.activities];
+    next[i] = { ...next[i], [f]: v };
+    upd("activities", next);
+  };
+
+  const addFaq = () => upd("faqs", [...data.faqs, { id: uid(), question: "", answer: "" }]);
+  const updFaq = (i: number, f: string, v: string) => {
+    const next = [...data.faqs];
+    next[i] = { ...next[i], [f]: v };
+    upd("faqs", next);
+  };
+
+  const addReview = () => upd("reviews", [...data.reviews, { name: "", rating: 5, comment: "", image: "" }]);
+  const updReview = (i: number, f: string, v: any) => {
+    const next = [...data.reviews];
+    next[i] = { ...next[i], [f]: v };
+    upd("reviews", next);
+  };
+
+  return (
+    <div className="p-6 space-y-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+      <div className="grid grid-cols-2 gap-4">
+        <div><FL required>City Name</FL><Inp placeholder="e.g. Paris" value={data.city} onChange={e => upd("city", e.target.value)} /></div>
+        <div><FL required>URL Slug</FL><Inp placeholder="e.g. things-to-do-in-paris" value={data.slug} onChange={e => upd("slug", e.target.value)} /></div>
+      </div>
+
+      <ImageUploader label="Hero Carousel Images" images={data.heroImages} onAdd={u => upd("heroImages", [...data.heroImages, u])} onRemove={i => upd("heroImages", data.heroImages.filter((_, j) => j !== i))} />
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Description Section</h3>
+        <div><FL>Short Summary</FL><TA value={data.description.short} onChange={e => updDesc("short", e.target.value)} rows={2} /></div>
+        <div><FL>Full Description (Rich Text/HTML)</FL><TA value={data.description.full} onChange={e => updDesc("full", e.target.value)} rows={5} /></div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h3 className="text-sm font-bold text-gray-900">Activities List</h3>
+          <Btn variant="outline" size="xs" onClick={addActivity}>+ Add Activity</Btn>
+        </div>
+        <div className="space-y-4">
+          {data.activities.map((act, i) => (
+            <Card key={i} className="p-4 grid grid-cols-4 gap-3">
+               <div className="col-span-3 space-y-3">
+                 <Inp placeholder="Activity Title" value={act.title} onChange={e => updActivity(i, "title", e.target.value)} />
+                 <div className="grid grid-cols-3 gap-2">
+                   <Inp placeholder="Duration" value={act.duration} onChange={e => updActivity(i, "duration", e.target.value)} />
+                   <Inp placeholder="Price (e.g. ₹999)" value={act.price} onChange={e => updActivity(i, "price", e.target.value)} />
+                   <Inp placeholder="Rating" value={act.rating} onChange={e => updActivity(i, "rating", e.target.value)} />
+                 </div>
+               </div>
+               <div className="space-y-2">
+                 <ImageUploader label="Icon" images={act.image ? [act.image] : []} onAdd={u => updActivity(i, "image", u)} onRemove={() => updActivity(i, "image", "")} />
+                 <Btn variant="ghost" size="xs" className="w-full text-red-500" onClick={() => upd("activities", data.activities.filter((_, j) => j !== i))}>Remove</Btn>
+               </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h3 className="text-sm font-bold text-gray-900">FAQ Section</h3>
+          <Btn variant="outline" size="xs" onClick={addFaq}>+ Add FAQ</Btn>
+        </div>
+        <div className="space-y-3">
+          {data.faqs.map((f, i) => (
+            <Card key={i} className="p-4 space-y-2">
+              <div className="flex gap-2">
+                <Inp placeholder="Question" className="font-bold" value={f.question} onChange={e => updFaq(i, "question", e.target.value)} />
+                <Btn variant="ghost" size="xs" onClick={() => upd("faqs", data.faqs.filter((_, j) => j !== i))}>✕</Btn>
+              </div>
+              <TA placeholder="Answer" value={f.answer} onChange={e => updFaq(i, "answer", e.target.value)} />
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h3 className="text-sm font-bold text-gray-900">Reviews</h3>
+          <Btn variant="outline" size="xs" onClick={addReview}>+ Add Review</Btn>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {data.reviews.map((r, i) => (
+            <Card key={i} className="p-4 flex gap-3">
+               <div className="w-16 h-16 shrink-0">
+                  <ImageUploader label="User" images={r.image ? [r.image] : []} onAdd={u => updReview(i, "image", u)} onRemove={() => updReview(i, "image", "")} />
+               </div>
+               <div className="flex-1 space-y-2">
+                 <div className="flex gap-2">
+                    <Inp placeholder="Name" value={r.name} onChange={e => updReview(i, "name", e.target.value)} />
+                    <Inp type="number" placeholder="★" className="w-16" value={r.rating} onChange={e => updReview(i, "rating", e.target.value)} />
+                 </div>
+                 <TA placeholder="Review Comment" value={r.comment} onChange={e => updReview(i, "comment", e.target.value)} rows={2} />
+                 <Btn variant="ghost" size="xs" className="text-red-500" onClick={() => upd("reviews", data.reviews.filter((_, j) => j !== i))}>Remove Review</Btn>
+               </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-6 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
+        <Btn variant="outline" onClick={onClose}>Cancel</Btn>
+        <Btn variant="success" onClick={() => onSave(data)}>Save Activity Page</Btn>
+      </div>
+    </div>
+  );
+};
+
+// ─── ACTIVITY PAGES LISTING ───────────────────────────────────────
+export const ActivityPagesPage = () => {
+  const { activityPages, setActivityPages } = useStore();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ActivityPage | null>(null);
+
+  const fetchPages = async () => {
+    const res = await fetch("/api/activity-pages");
+    const d = await res.json();
+    if (d.success) setActivityPages(d.data);
+  };
+
+  const onSave = async (data: ActivityPage) => {
+    const isEdit = !!data._id;
+    const url = isEdit ? `/api/activity-pages/${data.slug}` : "/api/activity-pages";
+    const res = await fetch(url, {
+      method: isEdit ? "PUT" : "POST",
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert(result.message);
+      fetchPages();
+      setModalOpen(false);
+      setEditing(null);
+    } else {
+      alert("Error: " + result.message);
+    }
+  };
+
+  const onDelete = async (slug: string) => {
+    if (!confirm("Delete this page?")) return;
+    const res = await fetch(`/api/activity-pages/${slug}`, { method: "DELETE" });
+    const result = await res.json();
+    if (result.success) {
+      alert(result.message);
+      fetchPages();
+    }
+  };
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Activity Landing Pages</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage dynamic CMS pages for "Things to do in..." sections.</p>
+        </div>
+        <Btn onClick={() => { setEditing(null); setModalOpen(true); }} size="lg">
+          <Ic.Plus /> Create City Page
+        </Btn>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activityPages.map(page => (
+          <Card key={page._id} className="overflow-hidden group hover:shadow-lg transition-all border-gray-100 flex flex-col">
+            <div className="relative aspect-video">
+              <img src={page.heroImages?.[0] || "/placeholder.jpg"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4">
+                <h3 className="text-white font-bold text-lg leading-tight uppercase tracking-tight">Things to do in {page.city}</h3>
+              </div>
+            </div>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded">URL: /activities/{page.slug}</div>
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">{page.activities.length} Activities</Badge>
+                 </div>
+                 <p className="text-xs text-gray-500 line-clamp-2 italic leading-relaxed">"{page.description.short}"</p>
+              </div>
+              <div className="flex gap-2 mt-6 pt-4 border-t border-gray-50">
+                <Btn variant="outline" size="sm" className="flex-1" onClick={() => { setEditing(page); setModalOpen(true); }}>Edit Page</Btn>
+                <Btn variant="danger" size="sm" onClick={() => onDelete(page.slug)}><Ic.Trash /></Btn>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? "Edit Activity Page" : "Create Activity Page"} wide>
+        <ActivityPageForm initial={editing} onSave={onSave} onClose={() => { setModalOpen(false); setEditing(null); }} />
+      </Modal>
     </div>
   );
 };
@@ -963,7 +1298,136 @@ export const MasterHotelsPage = () => {
   );
 };
 
-// ─── ACTIVITY PICKER (two-way sync) ──────────────────────────────
+// ─── DESTINATIONS PAGE ───────────────────────────────────────────
+export const DestinationsPage = () => {
+  const { destinations, setDestinations } = useStore();
+  const [modal, setModal] = useState<{ mode: "create" | "edit"; data: Destination | null } | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filtered = destinations.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSave = async (data: Destination) => {
+    try {
+      if (modal?.mode === "create") {
+        const res = await fetch("/api/destinations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (result.success) setDestinations(p => [...p, { ...data, _id: result.insertedId }]);
+      } else {
+        const res = await fetch("/api/destinations", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (result.success) setDestinations(p => p.map(d => d._id === data._id ? data : d));
+      }
+      setModal(null);
+    } catch (err) { console.error("DESTINATION SAVE ERROR:", err); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this destination?")) return;
+    try {
+      const res = await fetch("/api/destinations?id=" + id, { method: "DELETE" });
+      const result = await res.json();
+      if (result.success) setDestinations(p => p.filter(d => d._id !== id));
+      else alert("Delete failed");
+    } catch (err) { console.error("DELETE ERROR:", err); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1"><div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></div><Inp className="pl-9" placeholder="Search destinations…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <Btn onClick={() => setModal({ mode: "create", data: { _id: "", name: "", slug: "", image: "", description: "", isEnabled: true } })}><Ic.Plus />New Destination</Btn>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {filtered.map(dest => (
+          <Card key={dest._id} className="p-4 group">
+            <div className="flex gap-4">
+              <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                {dest.image ? <img src={dest.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><Ic.Globe /></div>}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between">
+                  <h3 className="font-bold text-gray-900">{dest.name}</h3>
+                  <div className="flex gap-1">
+                    <button onClick={() => setModal({ mode: "edit", data: dest })} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Ic.Edit /></button>
+                    <button onClick={() => handleDelete(dest._id || "")} className="p-1 text-red-500 hover:bg-red-50 rounded"><Ic.Trash /></button>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600 font-medium">/{dest.slug}</p>
+                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{dest.description}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.mode === "create" ? "Add Destination" : "Edit Destination"}>
+        <DestinationForm initial={modal?.data} onSave={handleSave} onCancel={() => setModal(null)} />
+      </Modal>
+    </div>
+  );
+};
+
+// ─── DESTINATION FORM ──────────────────────────────────────────
+export const DestinationForm = ({ initial, onSave, onCancel }) => {
+  const [data, setData] = useState(initial || { name: "", slug: "", image: "", description: "", isEnabled: true });
+  
+  const upd = (f, v) => setData(p => ({ ...p, [f]: v }));
+
+  return (
+    <div className="p-6 space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <FL required>Name</FL>
+          <Inp 
+            placeholder="e.g. Dubai" 
+            value={data.name} 
+            onChange={e => setData({ 
+              ...data, 
+              name: e.target.value, 
+              slug: e.target.value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') 
+            })} 
+          />
+        </div>
+        <div><FL required>Slug</FL><Inp placeholder="e.g. dubai" value={data.slug} onChange={e => upd("slug", e.target.value)} /></div>
+      </div>
+      
+      <div><FL>Description</FL><TA value={data.description} onChange={e => upd("description", e.target.value)} rows={3} placeholder="A brief overview of this destination..." /></div>
+      
+      <div>
+        <FL>Hero Image</FL>
+        <div className="space-y-3">
+          <Inp value={data.image} onChange={e => upd("image", e.target.value)} placeholder="Enter image URL..." />
+          <ImageUploader 
+            images={data.image ? [data.image] : []} 
+            onAdd={url => upd("image", url)} 
+            onRemove={() => upd("image", "")} 
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className={cls("w-10 h-5 rounded-full relative transition-all", data.isEnabled !== false ? "bg-emerald-500" : "bg-gray-300")}>
+            <div className={cls("absolute top-1 w-3 h-3 bg-white rounded-full transition-all", data.isEnabled !== false ? "right-1" : "left-1")} />
+          </div>
+          <input type="checkbox" className="sr-only" checked={data.isEnabled !== false} onChange={e => upd("isEnabled", e.target.checked)} />
+          <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">Enabled for Search</span>
+        </label>
+        <div className="flex gap-3">
+          <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
+          <Btn variant="success" onClick={() => { if (data.name.trim()) onSave(data); }}>Save Destination</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
 const ActivityPicker = ({ dayAct, dayId, onUpdate, onRemove }) => {
   const { masterActivities } = useStore();
   const [open, setOpen] = useState(true);
@@ -1024,6 +1488,7 @@ const ActivityPicker = ({ dayAct, dayId, onUpdate, onRemove }) => {
   );
 };
 
+// ─── HOTEL PICKER (two-way sync) ──────────────────────────────────
 // ─── HOTEL PICKER (two-way sync) ──────────────────────────────────
 const HotelPicker = ({ dayHotel, dayId, onUpdate, onRemove }) => {
   const { masterHotels } = useStore();
@@ -1101,6 +1566,82 @@ const HotelPicker = ({ dayHotel, dayId, onUpdate, onRemove }) => {
           </div>
 
           <div><FL optional>Notes</FL><TA placeholder="Check-in instructions, special requests…" value={dayHotel.customNotes || ""} onChange={e => upd("customNotes", e.target.value)} rows={2} /></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── TRANSFER PICKER (manual + existing) ──────────────────────────
+const TransferPicker = ({ dayTr, dayId, onUpdate, onRemove }) => {
+  const { transfers } = useStore();
+  const [open, setOpen] = useState(true);
+  const resolved = resolveTransfer(dayTr, transfers);
+  const upd = (f, v) => onUpdate(dayId, dayTr.id, f, v);
+
+  return (
+    <div className="border border-orange-200 rounded-xl overflow-hidden bg-white">
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-orange-50 border-b border-orange-100">
+        <div className="text-orange-600"><Ic.Car /></div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-orange-900 truncate">
+            {resolved.from || "—"} → {resolved.to || "—"}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-orange-500 font-medium">{resolved.vehicleType}</span>
+            <span className="text-gray-300">·</span>
+            <span className="text-xs text-blue-500 font-mono">{fmt12(dayTr.startTime)}</span>
+            {dayTr.source === "existing" ? (
+              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5"><Ic.Check />Linked</span>
+            ) : (
+                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-bold">Custom</span>
+            )}
+          </div>
+        </div>
+        <button onClick={() => setOpen(o => !o)} className="p-1 text-orange-500 hover:bg-orange-100 rounded-lg"><Ic.Chevron open={open} /></button>
+        <button onClick={() => onRemove(dayId, dayTr.id)} className="p-1 text-red-400 hover:bg-red-50 rounded-lg"><Ic.Trash /></button>
+      </div>
+
+      {open && (
+        <div className="p-4 space-y-4">
+          <div className="flex gap-2 p-1 bg-gray-50 rounded-lg">
+            <button type="button" onClick={() => upd("source", "custom")} className={cls("flex-1 py-1.5 text-xs font-bold rounded-md transition-all", dayTr.source === "custom" ? "bg-white text-blue-950 shadow-sm border border-gray-200" : "text-gray-400 hover:text-gray-600")}>Create New</button>
+            <button type="button" onClick={() => upd("source", "existing")} className={cls("flex-1 py-1.5 text-xs font-bold rounded-md transition-all", dayTr.source === "existing" ? "bg-white text-blue-950 shadow-sm border border-gray-200" : "text-gray-400 hover:text-gray-600")}>Select Existing</button>
+          </div>
+
+          {dayTr.source === "existing" && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <FL className="text-blue-700">Link to Existing Transfer</FL>
+                <Sel 
+                    placeholder="— Select from routes —"
+                    options={transfers.map(t => ({ label: `${t.pickupLocation} → ${t.dropLocation} (${t.vehicleType})`, value: t._id || "" }))}
+                    value={dayTr.transferId || ""}
+                    onChange={e => {
+                        const t = transfers.find(x => x._id === e.target.value);
+                        if (t) {
+                            upd("transferId", t._id);
+                            upd("from", t.pickupLocation);
+                            upd("to", t.dropLocation);
+                            upd("vehicleType", t.vehicleType);
+                            if (t.defaultStartTime) upd("startTime", t.defaultStartTime);
+                            if (t.defaultEndTime) upd("endTime", t.defaultEndTime);
+                        }
+                    }}
+                />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+             <div className="col-span-2 grid grid-cols-2 gap-3">
+                <div><FL>From</FL><Inp placeholder="Pickup" value={dayTr.from} onChange={e => upd("from", e.target.value)} /></div>
+                <div><FL>To</FL><Inp placeholder="Drop" value={dayTr.to} onChange={e => upd("to", e.target.value)} /></div>
+             </div>
+             <div><FL>Transfer Type</FL><Sel options={OPTIONS.transferType} value={dayTr.transferType} onChange={e => upd("transferType", e.target.value)} /></div>
+             <div><FL>Vehicle</FL><Sel options={OPTIONS.vehicleType} value={dayTr.vehicleType} onChange={e => upd("vehicleType", e.target.value)} /></div>
+             <div><FL>Start Time</FL><Inp type="time" value={dayTr.startTime} onChange={e => upd("startTime", e.target.value)} /></div>
+             <div><FL>End Time</FL><Inp type="time" value={dayTr.endTime} onChange={e => upd("endTime", e.target.value)} /></div>
+          </div>
+          <div><FL optional>Notes</FL><TA placeholder="Special instructions…" value={dayTr.notes || ""} onChange={e => upd("notes", e.target.value)} rows={2} /></div>
         </div>
       )}
     </div>
@@ -1187,11 +1728,12 @@ const SummarisedView = ({ itinerary, pkg }) => {
                         const resolved = resolveTransfer(tr, transfers);
                         return (
                         <div key={tr.id} className="flex items-center gap-2 text-xs text-gray-700">
-                          <span className="font-semibold text-gray-400 w-14 flex-shrink-0">{fmt12(tr.pickupTime)}</span>
+                          <span className="font-semibold text-gray-400 w-14 flex-shrink-0">{fmt12(tr.startTime)}</span>
                           <span className="font-semibold truncate max-w-[90px]">{resolved.from || "—"}</span>
                           <div className="flex items-center gap-1 text-orange-400 flex-shrink-0"><div className="w-3 h-px bg-orange-200" /><Ic.Arrow /><div className="w-3 h-px bg-orange-200" /></div>
                           <span className="font-semibold truncate max-w-[90px]">{resolved.to || "—"}</span>
                           <span className={cls("ml-auto text-xs px-2 py-0.5 rounded-full border flex-shrink-0", "bg-orange-50 text-orange-700 border-orange-200")}>{resolved.vehicleType}</span>
+                          {resolved.isExistingSource && <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold">Linked</span>}
                         </div>
                       ); })}
                     </div>
@@ -1445,19 +1987,7 @@ const ItineraryBuilder = ({ itinerary, setItinerary }) => {
                   {day.transfers.length === 0 && <p className="text-xs text-center text-gray-400 py-4 border-2 border-dashed border-orange-200 rounded-xl bg-orange-50/30">No transfers added</p>}
                   <div className="space-y-2">
                     {day.transfers.map(tr => (
-                      <div key={tr.id} className="p-3 border border-orange-200 rounded-xl bg-orange-50/30 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Sel options={OPTIONS.transferType} value={tr.transferType} onChange={e => updateTr(day.id, tr.id, "transferType", e.target.value)} className="w-28" />
-                          <Sel options={OPTIONS.vehicleType} value={tr.vehicleType} onChange={e => updateTr(day.id, tr.id, "vehicleType", e.target.value)} className="flex-1" />
-                          <button onClick={() => removeTr(day.id, tr.id)} className="p-1 text-red-400 hover:bg-red-50 rounded-lg flex-shrink-0"><Ic.Trash /></button>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2">
-                          <Inp placeholder="From" value={tr.from} onChange={e => updateTr(day.id, tr.id, "from", e.target.value)} />
-                          <Inp placeholder="To" value={tr.to} onChange={e => updateTr(day.id, tr.id, "to", e.target.value)} />
-                          <Inp type="time" value={tr.pickupTime} onChange={e => updateTr(day.id, tr.id, "pickupTime", e.target.value)} />
-                          <Inp type="time" value={tr.dropTime} onChange={e => updateTr(day.id, tr.id, "dropTime", e.target.value)} />
-                        </div>
-                      </div>
+                      <TransferPicker key={tr.id} dayTr={tr} dayId={day.id} onUpdate={(did, tid, f, v) => updateTr(did, tid, f, v)} onRemove={(did, tid) => removeTr(did, tid)} />
                     ))}
                   </div>
                 </div>
@@ -2031,6 +2561,16 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
   const [knowBeforeYouGo, setKnowBeforeYouGo] = useState(initial.knowBeforeYouGo || []);
   const [additionalInfo, setAdditionalInfo] = useState(initial.additionalInfo || emptyAdditionalInfo());
   const [tab, setTab] = useState("builder");
+
+  React.useEffect(() => {
+    setForm(initial);
+    setItinerary(initial.itinerary || []);
+    setFaqs(initial.faqs || []);
+    setInclusions(initial.inclusions || []);
+    setExclusions(initial.exclusions || []);
+    setKnowBeforeYouGo(initial.knowBeforeYouGo || []);
+    setAdditionalInfo(initial.additionalInfo || emptyAdditionalInfo());
+  }, [initial]);
   const upd = (f, v) => setForm(p => ({ ...p, [f]: v }));
   const updPx = (f, v) => setForm(p => ({ ...p, price: { ...p.price, [f]: v } }));
 
@@ -2610,7 +3150,13 @@ export const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
 };
 
 export const DuplicatePackageModal = ({ isOpen, onClose, basePkgId, setBasePkgId, packages, onSubmit }: any) => {
+  const basePkg = packages.find((p: any) => p.id === basePkgId);
+  const minDays = basePkg?.itinerary?.length || 1;
   const [days, setDays] = useState(5);
+  
+  React.useEffect(() => {
+    if (basePkg) setDays(minDays);
+  }, [basePkgId]);
 
   if (!isOpen) return null;
 
@@ -2631,8 +3177,8 @@ export const DuplicatePackageModal = ({ isOpen, onClose, basePkgId, setBasePkgId
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">New Duration (Days)</label>
-            <input type="number" min="1" max="15" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" value={days} onChange={e => setDays(parseInt(e.target.value))} />
-             <p className="text-[10px] text-gray-500 mt-1">Maximum 15 days allowed.</p>
+            <input type="number" min={minDays} max="15" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" value={days} onChange={e => setDays(parseInt(e.target.value) || minDays)} />
+             <p className="text-[10px] text-gray-500 mt-1">Minimum {minDays} days. Maximum 15 days allowed.</p>
           </div>
         </div>
         <div className="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
@@ -2750,7 +3296,7 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
 
 
 // ─── DASHBOARD ────────────────────────────────────────────────────
-export const Dashboard = ({ setPage, onOpenDuplicateModal }: any) => {
+export const Dashboard = ({ setPage, onOpenDuplicateModal, transfers, setTransfers, destinations, setDestinations }: any) => {
   const { packages, masterActivities, masterHotels } = useStore();
   const totalDays = packages.reduce((s, p) => s + (p.itinerary?.length || 0), 0);
   const linkedActs = packages.reduce((s, p) => s + (p.itinerary?.reduce((sd, d) => sd + (d.activities?.filter(a => a.activityRef).length || 0), 0) || 0), 0);
@@ -2869,8 +3415,10 @@ export const Sidebar = ({ page, setPage, counts }) => {
     { key: "bookings", label: "Bookings", icon: <Ic.Booking />, group: "main", badge: counts.bookings },
     { key: "transfers", label: "Transfers", icon: <Ic.Car />, group: "main", badge: counts.transfers },
     { key: "coupons", label: "Coupons", icon: <Ic.Tag />, group: "main", badge: counts.coupons },
+    { key: "activity-pages", label: "Activities Pages", icon: <Ic.Activity />, group: "main", badge: counts.activityPages },
     { key: "master-activities", label: "Activities", icon: <Ic.Activity />, group: "master", badge: counts.activities },
     { key: "master-hotels", label: "Hotels", icon: <Ic.Hotel />, group: "master", badge: counts.hotels },
+    { key: "destinations", label: "Destinations", icon: <Ic.Globe />, group: "master", badge: counts.destinations },
   ];
   const isActive = (key) => key === "dashboard" ? page === "dashboard" : key === "packages" ? ["packages", "create", "edit", "view"].includes(page) : page === key;
   return (
@@ -2952,6 +3500,8 @@ export const AdminStateProvider = ({ children }: { children: React.ReactNode }) 
   const [packages, setPackages] = useState<Package[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [activityPages, setActivityPages] = useState<ActivityPage[]>([]);
   const [masterActivities, setMasterActivities] = useState(INIT_ACTIVITIES);
   const [masterHotels, setMasterHotels] = useState(INIT_HOTELS);
   const [selectedId, setSelectedId] = useState(null);
@@ -2976,13 +3526,39 @@ export const AdminStateProvider = ({ children }: { children: React.ReactNode }) 
     } catch (err) { console.error(err); }
   };
 
+  const fetchDestinations = async () => {
+    try {
+      const res = await fetch("/api/destinations");
+      const result = await res.json();
+      if (result.success) setDestinations(result.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchActivityPages = async () => {
+    try {
+      const res = await fetch("/api/activity-pages");
+      const result = await res.json();
+      if (result.success) setActivityPages(result.data);
+    } catch (err) { console.error(err); }
+  };
+
   useEffect(() => {
     fetchPackages();
     fetchTransfers();
+    fetchDestinations();
+    fetchActivityPages();
   }, []);
   const selectedPkg = packages.find(p => p.id === selectedId);
 
-  const store = { packages, setPackages, masterActivities, setMasterActivities, masterHotels, setMasterHotels, coupons, setCoupons, transfers, setTransfers };
+  const store = { 
+    packages, setPackages, 
+    masterActivities, setMasterActivities, 
+    masterHotels, setMasterHotels, 
+    coupons, setCoupons, 
+    transfers, setTransfers,
+    destinations, setDestinations,
+    activityPages, setActivityPages
+  };
 
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateBasePkgId, setDuplicateBasePkgId] = useState("");
@@ -3052,6 +3628,8 @@ export const AdminStateProvider = ({ children }: { children: React.ReactNode }) 
     "coupons": { title: "Coupons", subtitle: `${coupons.length} discount coupon${coupons.length !== 1 ? "s" : ""}` },
     "bookings": { title: "Bookings", subtitle: "View and manage all guest bookings" },
     "transfers": { title: "Transfer Management", subtitle: `${transfers.length} active routes` },
+    "destinations": { title: "Destinations", subtitle: `${destinations.length} destinations in catalog` },
+    "activity-pages": { title: "Activities Pages", subtitle: `${activityPages.length} landing pages` },
   };
   const meta = PAGE_META[page] || PAGE_META.dashboard;
 
@@ -3110,10 +3688,15 @@ export const AdminStateProvider = ({ children }: { children: React.ReactNode }) 
 
           transfers: (day.transfers || []).map((tr) => ({
             id: tr.id,
-            pickupTime: tr.pickupTime,
+            source: tr.source || "custom",
+            transferId: tr.transferId || null,
+            transferType: tr.transferType,
+            vehicleType: tr.vehicleType,
             from: tr.from,
             to: tr.to,
-            vehicleType: tr.vehicleType,
+            startTime: tr.startTime,
+            endTime: tr.endTime,
+            notes: tr.notes,
           })),
         })),
       };
@@ -3209,6 +3792,14 @@ export const TransferForm = ({ initial, onSave, onCancel }: { initial: any; onSa
         <div>
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Currency</label>
           <Sel value={data.currency || "INR"} onChange={e => setData({ ...data, currency: e.target.value })} options={["INR", "USD", "EUR"]} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Default Start Time</label>
+          <Inp type="time" value={data.defaultStartTime || "08:00"} onChange={e => setData({ ...data, defaultStartTime: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Default End Time</label>
+          <Inp type="time" value={data.defaultEndTime || "10:00"} onChange={e => setData({ ...data, defaultEndTime: e.target.value })} />
         </div>
       </div>
       <div className="pt-6 border-t border-gray-100 flex justify-end gap-3">

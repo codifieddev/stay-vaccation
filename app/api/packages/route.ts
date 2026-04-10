@@ -7,9 +7,8 @@ import { randomUUID } from "crypto";
 export async function POST(req: NextRequest) {
   try {
     const bodyRaw = await req.json();
-    const { id, _id, ...body } = bodyRaw; // Remove client-generated IDs
-
-    console.log("[SERVER] Creating new package:", body.title);
+    // Always strip any client-provided id or _id — we generate a fresh one
+    const { id: _clientId, _id: _clientMongoId, ...body } = bodyRaw;
 
     if (!body.title || !Array.isArray(body.itinerary)) {
       return NextResponse.json(
@@ -20,10 +19,13 @@ export async function POST(req: NextRequest) {
 
     if (body.itinerary.length < 1 || body.itinerary.length > 15) {
       return NextResponse.json(
-        { message: "Duration validation failed: Package must be between 1 and 15 days.", success: false },
+        { message: "Duration validation failed: Package must have 1–15 days.", success: false },
         { status: 400 }
       );
     }
+
+    // Generate a fresh unique human-readable package ID
+    const newPackageId = `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
     const db = await getDatabase();
     const collection = db.collection("packages");
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
       return ObjectId.isValid(str) ? new ObjectId(str) : null;
     };
 
-    //  Clean itinerary safely
+    //  Clean itinerary safely — preserve all sub-arrays including transfers
     const cleanedItinerary = body.itinerary.map((day: any) => ({
       ...day,
       hotelStays: day.hotelStays?.map((h: any) => ({
@@ -45,20 +47,26 @@ export async function POST(req: NextRequest) {
         ...a,
         activityRef: safeObjectId(a.activityRef),
       })) || [],
+      transfers: day.transfers?.map((t: any) => ({ ...t })) || [],
     }));
 
     const result = await collection.insertOne({
       ...body,
+      id: newPackageId,         // ← unique ID, never reuses original package's id
       itinerary: cleanedItinerary,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
+    const insertedIdStr = result.insertedId.toHexString();
+    console.log(`[SERVER] Package created — mongoId: ${insertedIdStr}, packageId: ${newPackageId}, days: ${cleanedItinerary.length}`);
+
     return NextResponse.json(
       {
         message: "Package created successfully",
         success: true,
-        insertedId: result.insertedId,
+        insertedId: insertedIdStr,   // plain hex string for routing
+        packageId: newPackageId,     // human-readable unique ID
       },
       { status: 201 }
     );
@@ -74,15 +82,65 @@ export async function POST(req: NextRequest) {
 
 export const dynamic = "force-dynamic";
 
-//  GET ALL PACKAGES
-export async function GET() {
+//  GET ALL PACKAGES (or single package by ?id=)
+export async function GET(req: NextRequest) {
   try {
-    const db = await getDatabase();
+    const { searchParams } = new URL(req.url);
+    const singleId = searchParams.get("id");
 
+    const db = await getDatabase();
     const packagesCollection = db.collection("packages");
     const hotelsCollection = db.collection("hotels");
     const activitiesCollection = db.collection("activity");
 
+    // ── Single package fetch ──
+    if (singleId) {
+      if (!ObjectId.isValid(singleId)) {
+        return NextResponse.json(
+          { message: "Invalid package id", success: false },
+          { status: 400 }
+        );
+      }
+      const raw = await packagesCollection.findOne({ _id: new ObjectId(singleId) });
+      if (!raw) {
+        return NextResponse.json(
+          { message: "Package not found", success: false },
+          { status: 404 }
+        );
+      }
+      // Populate references for single package
+      for (const day of raw.itinerary || []) {
+        for (const stay of day.hotelStays || []) {
+          if (stay.hotelRef) stay.hotelData = await hotelsCollection.findOne({ _id: stay.hotelRef });
+        }
+        for (const act of day.activities || []) {
+          if (act.activityRef) act.activityData = await activitiesCollection.findOne({ _id: act.activityRef });
+        }
+      }
+      const { _id, id: originalId, ...rest } = raw as any;
+      const normalized = {
+        ...rest,
+        id: _id.toString(),
+        packageId: originalId, // Preserve human-readable ID
+        itinerary: (rest.itinerary || []).map((day: any) => ({
+          ...day,
+          id: day.id || randomUUID(),
+          mealsIncluded: Array.isArray(day.mealsIncluded) ? day.mealsIncluded
+            : typeof day.mealsIncluded === "string" && day.mealsIncluded
+            ? day.mealsIncluded.split(",").map((s: string) => s.trim()).filter(Boolean)
+            : [],
+          hotelStays:  (day.hotelStays  || []).map((h: any) => ({ ...h, id: h.id  || randomUUID() })),
+          activities:  (day.activities  || []).map((a: any) => ({ ...a, id: a.id  || randomUUID() })),
+          transfers:   (day.transfers   || []).map((t: any) => ({ ...t, id: t.id  || randomUUID() })),
+        })),
+      };
+      return NextResponse.json(
+        { success: true, data: normalized },
+        { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
+      );
+    }
+
+    // ── All packages fetch ──
     const packages = await packagesCollection.find({}).toArray();
 
     // Manual populate
@@ -109,11 +167,12 @@ export async function GET() {
 
    // IMPORTANT NORMALIZATION
 const normalizedPackages = packages.map((pkg) => {
-  const { _id, id, ...rest } = pkg;
+  const { _id, id: originalId, ...rest } = pkg;
 
   return {
     ...rest,
     id: _id.toString(), // Convert Mongo _id to string
+    packageId: originalId, // Preserve human-readable ID
 
     itinerary: (rest.itinerary || []).map((day: any) => ({
       ...day,
@@ -187,7 +246,7 @@ export async function PUT(req: NextRequest) {
       return ObjectId.isValid(str) ? new ObjectId(str) : null;
     };
 
-    // Clean itinerary (same as POST)
+    // Clean itinerary safely
     const cleanedItinerary = (body.itinerary || []).map((day: any) => ({
       ...day,
       hotelStays: day.hotelStays?.map((h: any) => ({
@@ -197,6 +256,9 @@ export async function PUT(req: NextRequest) {
       activities: day.activities?.map((a: any) => ({
         ...a,
         activityRef: safeObjectId(a.activityRef),
+      })) || [],
+      transfers: day.transfers?.map((t: any) => ({
+        ...t
       })) || [],
     }));
 
@@ -210,6 +272,8 @@ export async function PUT(req: NextRequest) {
         },
       }
     );
+
+    console.log(`[SERVER] Package updated — mongoId: ${id}, days: ${cleanedItinerary.length}`);
 
     return NextResponse.json(
       { message: "Package updated successfully", success: true },

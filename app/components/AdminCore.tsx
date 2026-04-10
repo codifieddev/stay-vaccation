@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo, useRef, createContext, useContext, useEffect } from "react";
+import React, { useState, useMemo, useRef, createContext, useContext, useEffect } from "react";
+import { useRouter as useNextRouter } from "next/navigation";
 
 // ══════════════════════════════════════════════════════════════════
 //   STAY VACATION — Admin Panel v6                                  
@@ -20,9 +21,9 @@ export interface StoreContextType {
   setTransfers: React.Dispatch<React.SetStateAction<TransferRecord[]>>;
 }
 
-const StoreContext = createContext<StoreContextType | null>(null);
+export const StoreContext = createContext<StoreContextType | null>(null);
 
-const useStore = () => {
+export const useStore = () => {
   const context = useContext(StoreContext);
   if (!context) throw new Error("useStore must be used within StoreContext.Provider");
   return context;
@@ -32,7 +33,7 @@ const useStore = () => {
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const cls = (...a) => a.filter(Boolean).join(" ");
 const fmt12 = (t) => { if (!t) return "—"; const [h, m] = t.split(":").map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
-const getCurrSym = (code) => ({ INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ" }[code] || code);
+export const getCurrSym = (code) => ({ INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ" }[code] || code);
 const parseDays = (dur) => { const m = dur?.match(/^(\d+)\s*Day/i); return m ? parseInt(m[1]) : 0; };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────
@@ -144,6 +145,7 @@ export interface DayHotel {
 
 export interface Transfer {
   id: string;
+  transferRef: string | null;
   transferType: string;
   vehicleType: string;
   from: string;
@@ -261,7 +263,7 @@ const emptyMasterActivity = (): MasterActivity => ({ _id: uid(), title: "", desc
 const emptyMasterHotel = (): MasterHotel => ({ _id: uid(), hotelName: "", city: "", starRating: "5", description: "", roomTypes: [], amenities: [], images: [] });
 const emptyDayActivity = (): DayActivity => ({ id: uid(), activityRef: null, time: "09:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: false, ticketIncluded: false, coverTitle: "" });
 const emptyDayHotel = (): DayHotel => ({ id: uid(), hotelRef: null, customRoomType: "", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: false, lunch: false, dinner: false } });
-const emptyTransfer = (): Transfer => ({ id: uid(), transferType: "Private", vehicleType: "Sedan", from: "", to: "", pickupTime: "08:00", dropTime: "10:00", notes: "" });
+const emptyTransfer = (): Transfer => ({ id: uid(), transferRef: null, transferType: "Private", vehicleType: "Sedan", from: "", to: "", pickupTime: "08:00", dropTime: "10:00", notes: "" });
 const emptyFaq = (): Faq => ({ id: uid(), question: "", answer: "" });
 const emptyKBYG = (): KBYG => ({ id: uid(), point: "" });
 const emptyAdditionalInfo = () => ({ aboutDestination: "", quickInfo: { destinationsCovered: "", duration: "", startPoint: "", endPoint: "" }, experiencesCovered: [], notToMiss: [] });
@@ -291,6 +293,18 @@ const resolveHotel = (dayHotel: DayHotel, masters: MasterHotel[]) => {
     roomType: dayHotel.customRoomType || m?.roomTypes?.[0] || "",
     notes: dayHotel.customNotes || "",
     isLinked: !!m, masterName: m?.hotelName,
+  };
+};
+
+
+const resolveTransfer = (dayTr: Transfer, masters: TransferRecord[]) => {
+  const m = masters.find(x => x._id === dayTr.transferRef);
+  return {
+    ...m, ...dayTr,
+    from: dayTr.from || m?.pickupLocation || "",
+    to: dayTr.to || m?.dropLocation || "",
+    vehicleType: dayTr.vehicleType || m?.vehicleType || "Sedan",
+    isLinked: !!m,
   };
 };
 
@@ -337,13 +351,13 @@ const INIT_PACKAGES: Package[] = [
       {
         id: "d1", dayNumber: 1, title: "Arrival & Welcome", city: "Seminyak", dayType: "arrival", mealsIncluded: ["Dinner"], notes: "Private airport transfer included.", description: "",
         hotelStays: [{ id: "dh1", hotelRef: "mh-001", customRoomType: "Private Pool Villa", checkInTime: "15:00", checkOutTime: "11:00", customNotes: "Welcome fruit basket.", customImages: [], mealInclusions: { breakfast: true, lunch: false, dinner: true } }],
-        transfers: [{ id: "dt1", transferType: "Private", vehicleType: "SUV", from: "Ngurah Rai Airport", to: "Seminyak", pickupTime: "14:00", dropTime: "15:00", notes: "Name board at arrivals." }],
+        transfers: [{ id: "dt1", transferRef: null, transferType: "Private", vehicleType: "SUV", from: "Ngurah Rai Airport", to: "Seminyak", pickupTime: "14:00", dropTime: "15:00", notes: "Name board at arrivals." }],
         activities: [{ id: "da1", activityRef: "ma-002", time: "06:30", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: false, coverTitle: "Start your day right" }]
       },
       {
         id: "d2", dayNumber: 2, title: "Temples & Rice Terraces", city: "Ubud", dayType: "sightseeing", mealsIncluded: ["Breakfast", "Lunch"], notes: "Wear modest clothing.", description: "",
         hotelStays: [{ id: "dh2", hotelRef: "mh-003", customRoomType: "Uma Suite", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: true, lunch: true, dinner: false } }],
-        transfers: [{ id: "dt2", transferType: "Private", vehicleType: "Sedan", from: "Seminyak", to: "Ubud", pickupTime: "08:00", dropTime: "09:00", notes: "" }],
+        transfers: [{ id: "dt2", transferRef: null, transferType: "Private", vehicleType: "Sedan", from: "Seminyak", to: "Ubud", pickupTime: "08:00", dropTime: "09:00", notes: "" }],
         activities: [
           { id: "da2", activityRef: "ma-003", time: "09:30", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: true, coverTitle: "" },
           { id: "da3", activityRef: "ma-004", time: "14:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: false, ticketIncluded: false, coverTitle: "" },
@@ -353,12 +367,12 @@ const INIT_PACKAGES: Package[] = [
       {
         id: "d4", dayNumber: 4, title: "Island Adventure", city: "Nusa Penida", dayType: "sightseeing", mealsIncluded: ["Breakfast", "Lunch"], notes: "Speedboat at 7:30 AM.", description: "",
         hotelStays: [{ id: "dh4", hotelRef: "mh-001", customRoomType: "", checkInTime: "14:00", checkOutTime: "11:00", customNotes: "", customImages: [], mealInclusions: { breakfast: true, lunch: false, dinner: false } }],
-        transfers: [{ id: "dt3", transferType: "Private", vehicleType: "Speedboat", from: "Sanur Beach", to: "Nusa Penida", pickupTime: "07:30", dropTime: "08:15", notes: "" }],
+        transfers: [{ id: "dt3", transferRef: null, transferType: "Private", vehicleType: "Speedboat", from: "Sanur Beach", to: "Nusa Penida", pickupTime: "07:30", dropTime: "08:15", notes: "" }],
         activities: [{ id: "da4", activityRef: "ma-003", time: "09:00", customTitle: "", customDescription: "", customImages: [], guideIncluded: true, ticketIncluded: true, coverTitle: "Jaw-dropping vistas" }]
       },
       {
         id: "d5", dayNumber: 5, title: "Departure", city: "Denpasar", dayType: "departure", mealsIncluded: ["Breakfast"], notes: "Check-out 11 AM.", description: "",
-        hotelStays: [], transfers: [{ id: "dt4", transferType: "Private", vehicleType: "SUV", from: "Seminyak", to: "Airport", pickupTime: "12:30", dropTime: "13:15", notes: "" }], activities: []
+        hotelStays: [], transfers: [{ id: "dt4", transferRef: null, transferType: "Private", vehicleType: "SUV", from: "Seminyak", to: "Airport", pickupTime: "12:30", dropTime: "13:15", notes: "" }], activities: []
       },
     ],
     createdAt: "2025-01-15",
@@ -366,24 +380,24 @@ const INIT_PACKAGES: Package[] = [
 ];
 
 // ─── BASE UI PRIMITIVES ───────────────────────────────────────────
-const Badge = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+export const Badge = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <span className={cls("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border", className)}>{children}</span>
 );
-const Inp = ({ className = "", ...p }: React.InputHTMLAttributes<HTMLInputElement>) => (
+export const Inp = ({ className = "", ...p }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input className={cls("w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 placeholder:text-gray-400 transition-all", className)} {...p} />
 );
 const TA = ({ className = "", rows = 3, ...p }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea rows={rows} className={cls("w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 placeholder:text-gray-400 transition-all resize-none", className)} {...p} />
 );
-const Sel = ({ options, placeholder, value, onChange, className = "" }: { options: string[]; placeholder?: string; value?: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; className?: string }) => (
+export const Sel = ({ options, placeholder, value, onChange, className = "" }: { options: string[]; placeholder?: string; value?: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; className?: string }) => (
   <select value={value || ""} onChange={onChange}
     className={cls("w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all cursor-pointer", !value ? "text-gray-400" : "text-gray-900", className)}>
     {placeholder && <option value="" disabled>{placeholder}</option>}
     {options.map(o => <option key={o} value={o}>{o}</option>)}
   </select>
 );
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => <div className={cls("bg-white rounded-xl border border-gray-100 shadow-sm", className)}>{children}</div>;
-const FL = ({ children, required, optional, className }: { children: React.ReactNode; required?: boolean; optional?: boolean; className?: string }) => (
+export const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => <div className={cls("bg-white rounded-xl border border-gray-100 shadow-sm", className)}>{children}</div>;
+export const FL = ({ children, required, optional, className }: { children: React.ReactNode; required?: boolean; optional?: boolean; className?: string }) => (
   <label className={cls("block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5", className)}>
     {children}{required && <span className="text-red-500 ml-0.5">*</span>}{optional && <span className="ml-1 text-gray-400 font-normal normal-case">(optional)</span>}
   </label>
@@ -394,7 +408,7 @@ interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-const Btn = ({ variant = "primary", size = "md", className = "", children, ...p }: BtnProps) => {
+export const Btn = ({ variant = "primary", size = "md", className = "", children, ...p }: BtnProps) => {
   const sz = { xs: "px-2 py-1 text-xs", sm: "px-3 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-2.5 text-sm" };
   const va = {
     primary: "bg-blue-950 text-white hover:bg-blue-900 shadow-sm",
@@ -419,7 +433,7 @@ interface ModalProps {
   wide?: boolean;
 }
 
-const Modal = ({ open, onClose, title, children, wide = false }: ModalProps) => {
+export const Modal = ({ open, onClose, title, children, wide = false }: ModalProps) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -436,7 +450,7 @@ const Modal = ({ open, onClose, title, children, wide = false }: ModalProps) => 
 };
 
 // ─── ICONS ────────────────────────────────────────────────────────
-const Ic = {
+export const Ic = {
   Dashboard: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
   Package: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" /></svg>,
   Activity: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
@@ -472,7 +486,7 @@ interface ImageUploaderProps {
   label?: string;
 }
 
-const ImageUploader = ({ images = [], onAdd, onRemove, label = "Images" }: ImageUploaderProps) => {
+export const ImageUploader = ({ images = [], onAdd, onRemove, label = "Images" }: ImageUploaderProps) => {
 
   const ref = useRef<HTMLInputElement>(null);
 
@@ -659,7 +673,7 @@ const MasterHotelForm = ({ initial, onSave, onClose }) => {
 };
 
 // ─── MASTER ACTIVITIES PAGE ───────────────────────────────────────
-const MasterActivitiesPage = () => {
+export const MasterActivitiesPage = () => {
   const { masterActivities, setMasterActivities, packages } = useStore();
   const [modal, setModal] = useState<{ mode: "create" | "edit"; data: MasterActivity | null } | null>(null);
   const [search, setSearch] = useState("");
@@ -805,7 +819,7 @@ const MasterActivitiesPage = () => {
 
 
 // ─── MASTER HOTELS PAGE ───────────────────────────────────────────
-const MasterHotelsPage = () => {
+export const MasterHotelsPage = () => {
   const { masterHotels, setMasterHotels, packages } = useStore();
   const [modal, setModal] = useState<{ mode: "create" | "edit"; data: MasterHotel | null } | null>(null);
   const [search, setSearch] = useState("");
@@ -1095,7 +1109,7 @@ const HotelPicker = ({ dayHotel, dayId, onUpdate, onRemove }) => {
 
 // ─── SUMMARISED VIEW ──────────────────────────────────────────────
 const SummarisedView = ({ itinerary, pkg }) => {
-  const { masterActivities, masterHotels } = useStore();
+  const { masterActivities, masterHotels, transfers } = useStore();
   const [openDays, setOpenDays] = useState(() => new Set([itinerary[0]?.id]));
   const toggle = (id) => setOpenDays(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const mealCls = { Breakfast: "bg-amber-100 text-amber-800", Lunch: "bg-orange-100 text-orange-800", Dinner: "bg-rose-100 text-rose-800" };
@@ -1169,15 +1183,17 @@ const SummarisedView = ({ itinerary, pkg }) => {
                       <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Transfers ({day.transfers.length})</span>
                     </div>
                     <div className="space-y-2 ml-7">
-                      {day.transfers.map(tr => (
+                      {day.transfers.map(tr => {
+                        const resolved = resolveTransfer(tr, transfers);
+                        return (
                         <div key={tr.id} className="flex items-center gap-2 text-xs text-gray-700">
                           <span className="font-semibold text-gray-400 w-14 flex-shrink-0">{fmt12(tr.pickupTime)}</span>
-                          <span className="font-semibold truncate max-w-[90px]">{tr.from || "—"}</span>
+                          <span className="font-semibold truncate max-w-[90px]">{resolved.from || "—"}</span>
                           <div className="flex items-center gap-1 text-orange-400 flex-shrink-0"><div className="w-3 h-px bg-orange-200" /><Ic.Arrow /><div className="w-3 h-px bg-orange-200" /></div>
-                          <span className="font-semibold truncate max-w-[90px]">{tr.to || "—"}</span>
-                          <span className={cls("ml-auto text-xs px-2 py-0.5 rounded-full border flex-shrink-0", "bg-orange-50 text-orange-700 border-orange-200")}>{tr.vehicleType}</span>
+                          <span className="font-semibold truncate max-w-[90px]">{resolved.to || "—"}</span>
+                          <span className={cls("ml-auto text-xs px-2 py-0.5 rounded-full border flex-shrink-0", "bg-orange-50 text-orange-700 border-orange-200")}>{resolved.vehicleType}</span>
                         </div>
-                      ))}
+                      ); })}
                     </div>
                   </div>
                 )}
@@ -2006,7 +2022,7 @@ const FAQDisplay = ({ faqs }) => {
 };
 
 // ─── PACKAGE FORM ─────────────────────────────────────────────────
-const PackageForm = ({ initial, onSave, onCancel, mode }) => {
+export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
   const [form, setForm] = useState(initial);
   const [itinerary, setItinerary] = useState(initial.itinerary || []);
   const [faqs, setFaqs] = useState(initial.faqs || []);
@@ -2142,7 +2158,8 @@ const PackageForm = ({ initial, onSave, onCancel, mode }) => {
 };
 
 // ─── VIEW PACKAGE ─────────────────────────────────────────────────
-const ViewPackage = ({ pkg, onEdit }) => {
+export const ViewPackage = ({ pkg, onEdit }: any) => {
+  const { transfers } = useStore();
   const [tab, setTab] = useState("summary");
   const sym = getCurrSym(pkg.price?.currency);
   const [kbygOpen, setKbygOpen] = useState(true);
@@ -2370,7 +2387,7 @@ const emptyCouponForm = (): CouponFormData => ({
   minOrderValue: "", maxUses: "", isActive: true, expiryDate: "",
 });
 
-const CouponsPage = () => {
+export const CouponsPage = () => {
   const { coupons, setCoupons } = useStore();
   const [modal, setModal] = useState<{ mode: "create" | "edit"; data: Coupon | null } | null>(null);
   const [form, setForm] = useState<CouponFormData>(emptyCouponForm());
@@ -2505,8 +2522,9 @@ const CouponsPage = () => {
 };
 
 // ─── PACKAGES LISTING ─────────────────────────────────────────────
-const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
+export const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
   const { packages, setPackages } = useStore();
+  const _pkgRouter = useNextRouter();
   const [search, setSearch] = useState("");
   const [bookingModal, setBookingModal] = useState<Package | null>(null);
 
@@ -2516,7 +2534,7 @@ const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm"><div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></div><Inp className="pl-9" placeholder="Search packages…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-        <Btn className="ml-auto" onClick={() => setPage("create")}><Ic.Plus />Create Package</Btn>
+        <Btn className="ml-auto" onClick={() => _pkgRouter.push('/admin/packages/create')}><Ic.Plus />Create Package</Btn>
       </div>
       <Card>
         <div className="overflow-x-auto">
@@ -2565,8 +2583,8 @@ const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-0.5">
-                        <button onClick={() => { setSelectedId(pkg.id); setPage("view"); }} className="p-1.5 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors" title="View"><Ic.Eye /></button>
-                        <button onClick={() => { setSelectedId(pkg.id); setPage("edit"); }} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Ic.Edit /></button>
+                        <button onClick={() => _pkgRouter.push('/admin/packages/view/' + pkg.id)} className="p-1.5 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors" title="View"><Ic.Eye /></button>
+                        <button onClick={() => _pkgRouter.push('/admin/packages/edit/' + pkg.id)} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Ic.Edit /></button>
                         <button onClick={() => onDuplicate(pkg)} className="p-1.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1" title="Duplicate Package"><Ic.Package /></button>
                         <button onClick={async () => { if (!window.confirm("Delete this package?")) return; try { const res = await fetch("/api/packages?id=" + pkg.id, { method: "DELETE" }); const result = await res.json(); if (result.success) setPackages(p => p.filter(x => x.id !== pkg.id)); else alert("Delete failed: " + (result.message || "Unknown error")); } catch { alert("Network error. Delete failed."); } }} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-colors" title="Delete"><Ic.Trash /></button>
                         <button onClick={() => setBookingModal(pkg)} className="ml-2 px-2.5 py-1 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"><Ic.Plus />Book</button>
@@ -2591,7 +2609,7 @@ const PackagesListing = ({ setPage, setSelectedId, onDuplicate }) => {
   );
 };
 
-const DuplicatePackageModal = ({ isOpen, onClose, basePkgId, setBasePkgId, packages, onSubmit }: any) => {
+export const DuplicatePackageModal = ({ isOpen, onClose, basePkgId, setBasePkgId, packages, onSubmit }: any) => {
   const [days, setDays] = useState(5);
 
   if (!isOpen) return null;
@@ -2732,7 +2750,7 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
 
 
 // ─── DASHBOARD ────────────────────────────────────────────────────
-const Dashboard = ({ setPage, onOpenDuplicateModal }: any) => {
+export const Dashboard = ({ setPage, onOpenDuplicateModal }: any) => {
   const { packages, masterActivities, masterHotels } = useStore();
   const totalDays = packages.reduce((s, p) => s + (p.itinerary?.length || 0), 0);
   const linkedActs = packages.reduce((s, p) => s + (p.itinerary?.reduce((sd, d) => sd + (d.activities?.filter(a => a.activityRef).length || 0), 0) || 0), 0);
@@ -2842,343 +2860,9 @@ const STATUS_COLORS = {
   cancelled: "bg-red-50 text-red-800 border-red-200",
 };
 
-const BookingsPage = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selected, setSelected] = useState<Booking | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-
-  const fetchBookings = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/bookings");
-      const data = await res.json();
-      if (data.success) setBookings(data.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchBookings(); }, []);
-
-  const handleStatusChange = async (booking: Booking, newStatus: string) => {
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...booking, status: newStatus }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus as Booking["status"] } : b));
-        if (selected?.id === booking.id) setSelected(b => b ? { ...b, status: newStatus as Booking["status"] } : b);
-      } else { alert("Status update failed."); }
-    } catch (e) { alert("Network error."); }
-  };
-
-  const handleDelete = async (booking: Booking) => {
-    if (!confirm(`Delete booking for "${booking.userName}"? This cannot be undone.`)) return;
-    try {
-      const res = await fetch(`/api/bookings?id=${booking.id}`, { method: "DELETE" });
-      const result = await res.json();
-      if (result.success) {
-        setBookings(prev => prev.filter(b => b.id !== booking.id));
-        if (selected?.id === booking.id) setDetailOpen(false);
-      } else {
-        alert("Delete failed: " + (result.message || "Unknown error"));
-      }
-    } catch (e) {
-      alert("Network error. Delete failed.");
-    }
-  };
-
-  const filtered = bookings.filter(b => {
-    const matchSearch = !search || [b.userName, b.userEmail, b.packageTitle].some(f => f?.toLowerCase().includes(search.toLowerCase()));
-    const matchStatus = statusFilter === "all" || b.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const stats = {
-    total: bookings.length,
-    confirmed: bookings.filter(b => b.status === "confirmed").length,
-    pending: bookings.filter(b => b.status === "pending").length,
-    cancelled: bookings.filter(b => b.status === "cancelled").length,
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Total Bookings", value: stats.total, color: "text-blue-900", bg: "bg-blue-50" },
-          { label: "Confirmed", value: stats.confirmed, color: "text-emerald-700", bg: "bg-emerald-50" },
-          { label: "Pending", value: stats.pending, color: "text-amber-700", bg: "bg-amber-50" },
-          { label: "Cancelled", value: stats.cancelled, color: "text-red-700", bg: "bg-red-50" },
-        ].map(s => (
-          <Card key={s.label} className="p-4 flex items-center gap-4">
-            <div className={cls("w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold", s.bg, s.color)}>{s.value}</div>
-            <p className="text-sm font-semibold text-gray-600">{s.label}</p>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <Card className="px-4 py-3 flex items-center gap-3">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, package…" className="w-full pl-9 pr-3 py-2 text-sm text-gray-900 bg-white placeholder:text-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900" />
-        </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900">
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <Btn variant="outline" size="sm" onClick={fetchBookings}>Refresh</Btn>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                {["Guest", "Package", "Travel Date", "Guests", "Total", "Status", "Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading && (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">Loading bookings…</td></tr>
-              )}
-              {!loading && filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
-                  {bookings.length === 0 ? "No bookings yet. They will appear here when guests book packages." : "No bookings match your search."}
-                </td></tr>
-              )}
-              {!loading && filtered.map((booking, idx) => (
-                <tr key={`${booking.id}-${idx}`} className="hover:bg-blue-50/20 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <p className="font-bold text-gray-900">{booking.userName}</p>
-                    <p className="text-xs text-gray-400">{booking.userEmail}</p>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <p className="font-semibold text-gray-800 max-w-[180px] truncate">{booking.packageTitle || "—"}</p>
-                  </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <p className="text-gray-700">{booking.travelDate || "—"}</p>
-                    {booking.returnDate && <p className="text-xs text-gray-400">→ {booking.returnDate}</p>}
-                  </td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span className="text-gray-700 font-semibold">{(booking.adults || 0) + (booking.children || 0)}</span>
-                    <p className="text-xs text-gray-400">{booking.adults}A {booking.children ? `${booking.children}C` : ""}</p>
-                  </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <p className="font-bold text-blue-900">{getCurrSym(booking.currency)}{Number(booking.totalPrice || 0).toLocaleString("en-IN")}</p>
-                    <p className="text-xs text-gray-400">{booking.currency}</p>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <select
-                      value={booking.status}
-                      onChange={e => handleStatusChange(booking, e.target.value)}
-                      className={cls("text-xs font-semibold rounded-full px-2.5 py-1 border cursor-pointer focus:outline-none", STATUS_COLORS[booking.status] || "bg-gray-50 text-gray-600 border-gray-200")}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { setSelected(booking); setDetailOpen(true); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50 text-blue-700 transition-colors" title="View Details">
-                        <Ic.Eye />
-                      </button>
-                      <button onClick={() => handleDelete(booking)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Delete Booking">
-                        <Ic.Trash />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Booking Detail Modal */}
-      <Modal open={detailOpen} onClose={() => setDetailOpen(false)} title="Booking Details" wide>
-        {selected && (
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Guest Name</p>
-                <p className="text-sm font-semibold text-gray-900">{selected.userName}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email</p>
-                <p className="text-sm text-gray-700">{selected.userEmail || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Phone</p>
-                <p className="text-sm text-gray-700">{selected.userPhone || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Package</p>
-                <p className="text-sm font-semibold text-blue-900">{selected.packageTitle || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Travel Date</p>
-                <p className="text-sm text-gray-700">{selected.travelDate || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Return Date</p>
-                <p className="text-sm text-gray-700">{selected.returnDate || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Adults / Children</p>
-                <p className="text-sm text-gray-700">{selected.adults} Adults · {selected.children || 0} Children</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Price</p>
-                <p className="text-sm font-bold text-blue-900">{getCurrSym(selected.currency)}{Number(selected.totalPrice || 0).toLocaleString("en-IN")} {selected.currency}</p>
-              </div>
-            </div>
-            {selected.notes && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notes</p>
-                <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{selected.notes}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Update Status</p>
-              <div className="flex gap-2">
-                {(["pending", "confirmed", "cancelled"] as const).map(s => (
-                  <Btn key={s} size="sm"
-                    variant={selected.status === s ? "primary" : "outline"}
-                    onClick={() => handleStatusChange(selected, s)}
-                    className="capitalize"
-                  >{s}</Btn>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-gray-100">
-              <Btn variant="danger" size="sm" onClick={() => handleDelete(selected)}>Delete Booking</Btn>
-              <Btn variant="ghost" size="sm" onClick={() => setDetailOpen(false)}>Close</Btn>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-};
-
-const TransfersPage = () => {
-  const { transfers, setTransfers } = useStore();
-  const [modal, setModal] = useState<{ mode: "create" | "edit"; data: TransferRecord | null } | null>(null);
-  const [search, setSearch] = useState("");
-
-  const filtered = transfers.filter(t => 
-    !search || t.pickupLocation.toLowerCase().includes(search.toLowerCase()) || 
-    t.dropLocation.toLowerCase().includes(search.toLowerCase()) ||
-    t.vehicleType.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const openCreate = () => setModal({ mode: "create", data: { pickupLocation: "", dropLocation: "", vehicleType: "Sedan", price: 0, currency: "INR" } });
-  const openEdit = (t: TransferRecord) => setModal({ mode: "edit", data: t });
-
-  const handleSave = async (data: TransferRecord) => {
-    try {
-      const method = modal?.mode === "create" ? "POST" : "PUT";
-      const res = await fetch("/api/transfers", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (result.success) {
-        if (modal?.mode === "create") {
-          setTransfers(p => [...p, { ...data, _id: result.insertedId || (result as any).data?._id }]);
-        } else {
-          setTransfers(p => p.map(t => t._id === data._id ? data : t));
-        }
-        setModal(null);
-      }
-    } catch (e) { console.error(e); }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this transfer route?")) return;
-    try {
-      const res = await fetch(`/api/transfers?id=${id}`, { method: "DELETE" });
-      const result = await res.json();
-      if (result.success) setTransfers(p => p.filter(t => t._id !== id));
-    } catch (e) { console.error(e); }
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm"><div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></div><Inp className="pl-9" placeholder="Search routes…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-        <Btn className="ml-auto" onClick={openCreate}><Ic.Plus />New Transfer</Btn>
-      </div>
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-gray-100 bg-gray-50/80">
-              {["Route", "Vehicle", "Price", "Duration", "Actions"].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-gray-400 text-sm">No transfers found.</td></tr>}
-              {filtered.map(t => (
-                <tr key={t._id} className="hover:bg-blue-50/20 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900">{t.pickupLocation}</span>
-                      <Ic.Arrow />
-                      <span className="font-bold text-gray-900">{t.dropLocation}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5"><Badge className="bg-indigo-50 text-indigo-700 border-indigo-100">{t.vehicleType}</Badge></td>
-                  <td className="px-4 py-3.5"><span className="font-bold text-blue-950">{getCurrSym(t.currency)}{Number(t.price).toLocaleString("en-IN")}</span></td>
-                  <td className="px-4 py-3.5 text-xs text-gray-500">{t.duration || "—"}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-0.5">
-                      <button onClick={() => openEdit(t)} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg"><Ic.Edit /></button>
-                      <button onClick={() => handleDelete(t._id!)} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg"><Ic.Trash /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.mode === "create" ? "New Transfer Route" : "Edit Transfer"}>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div><FL required>Pickup Location</FL><Inp value={modal?.data?.pickupLocation || ""} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, pickupLocation: e.target.value } }))} /></div>
-            <div><FL required>Drop Location</FL><Inp value={modal?.data?.dropLocation || ""} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, dropLocation: e.target.value } }))} /></div>
-            <div><FL required>Vehicle Type</FL><Sel options={OPTIONS.vehicleType} value={modal?.data?.vehicleType || ""} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, vehicleType: e.target.value } }))} /></div>
-            <div><FL optional>Duration</FL><Inp value={modal?.data?.duration || ""} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, duration: e.target.value } }))} /></div>
-            <div><FL required>Price</FL><Inp type="number" value={String(modal?.data?.price || "")} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, price: Number(e.target.value) } }))} /></div>
-            <div><FL required>Currency</FL><Sel options={["INR", "USD", "EUR", "AED"]} value={modal?.data?.currency || "INR"} onChange={e => setModal(m => ({ ...m!, data: { ...m!.data!, currency: e.target.value } }))} /></div>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <Btn variant="outline" onClick={() => setModal(null)}>Cancel</Btn>
-            <Btn variant="success" onClick={() => handleSave(modal!.data!)}>Save Route</Btn>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-};
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────
-const Sidebar = ({ page, setPage, counts }) => {
+export const Sidebar = ({ page, setPage, counts }) => {
   const nav = [
     { key: "dashboard", label: "Dashboard", icon: <Ic.Dashboard />, group: "main" },
     { key: "packages", label: "Travel Packages", icon: <Ic.Package />, group: "main", badge: counts.packages },
@@ -3230,7 +2914,7 @@ const Sidebar = ({ page, setPage, counts }) => {
 };
 
 // ─── TOPBAR ───────────────────────────────────────────────────────
-const Topbar = ({ title, subtitle }) => (
+export const Topbar = ({ title, subtitle }) => (
   <header className="fixed top-0 left-60 right-0 h-16 bg-white border-b border-gray-100 flex items-center px-6 z-20 shadow-sm">
     <div>
       <h1 className="text-base font-bold text-gray-900 leading-tight">{title}</h1>
@@ -3240,7 +2924,7 @@ const Topbar = ({ title, subtitle }) => (
 );
 
 // ─── APP ROOT ─────────────────────────────────────────────────────
-export default function App() {
+export const AdminStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [formData, setFormData] = useState({
     title: "",
     destination: "",
@@ -3487,29 +3171,50 @@ export default function App() {
   };
 
   return (
-    <StoreContext.Provider value={store}>
-      <div className="min-h-screen bg-gray-50/80">
-        <Sidebar page={page} setPage={setPage} counts={{ packages: packages.length, activities: masterActivities.length, hotels: masterHotels.length, coupons: coupons.length, bookings: 0, transfers: transfers.length }} />
-        <Topbar title={meta.title} subtitle={meta.subtitle} />
-        <main className="ml-60 pt-16 min-h-screen">
-          <div className="p-6 max-w-[1400px]">
-            {["create", "edit", "view"].includes(page) && (
-              <button onClick={() => setPage("packages")} className="inline-flex items-center gap-1.5 text-sm text-blue-900 font-semibold mb-5 hover:underline"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>Back to Packages</button>
-            )}
-            {page === "dashboard" && <Dashboard setPage={setPage} onOpenDuplicateModal={() => { setDuplicateBasePkgId(""); setDuplicateModalOpen(true); }} />}
-            {page === "packages" && <PackagesListing setPage={setPage} setSelectedId={setSelectedId} onDuplicate={(pkg: Package) => { setDuplicateBasePkgId(pkg.id); setDuplicateModalOpen(true); }} />}
-            {page === "create" && <PackageForm initial={duplicatePkgData || emptyPkg()} mode="create" onSave={handleCreate} onCancel={() => { setDuplicatePkgData(null); setPage("packages"); }} />}
-            {page === "edit" && selectedPkg && <PackageForm key={selectedPkg.id} initial={selectedPkg} mode="edit" onSave={handleEdit} onCancel={() => setPage("packages")} />}
-            {page === "view" && selectedPkg && <ViewPackage pkg={selectedPkg} onEdit={() => setPage("edit")} />}
-            {page === "master-activities" && <MasterActivitiesPage />}
-            {page === "master-hotels" && <MasterHotelsPage />}
-            {page === "coupons" && <CouponsPage />}
-            {page === "bookings" && <BookingsPage />}
-            {page === "transfers" && <TransfersPage />}
-          </div>
-        </main>
-        <DuplicatePackageModal isOpen={duplicateModalOpen} onClose={() => setDuplicateModalOpen(false)} basePkgId={duplicateBasePkgId} setBasePkgId={setDuplicateBasePkgId} packages={packages} onSubmit={handleDuplicateModalSubmit} />
-      </div>
+        <StoreContext.Provider value={store}>
+      {children}
     </StoreContext.Provider>
   );
-}
+};
+
+// ─── TRANSFER FORM ───────────────────────────────────────────────
+export const TransferForm = ({ initial, onSave, onCancel }: { initial: any; onSave: (d: any) => void; onCancel: () => void }) => {
+  const [data, setData] = React.useState(initial);
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Pickup Location</label>
+          <Inp value={data.pickupLocation || ""} onChange={e => setData({ ...data, pickupLocation: e.target.value })} placeholder="e.g. Jaipur Airport" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Drop Location</label>
+          <Inp value={data.dropLocation || ""} onChange={e => setData({ ...data, dropLocation: e.target.value })} placeholder="e.g. Hotel Rambagh Palace" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Vehicle Type</label>
+          <Sel value={data.vehicleType || "Sedan"} onChange={e => setData({ ...data, vehicleType: e.target.value })} options={["Sedan", "SUV", "Minivan", "Bus"]} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Average Duration</label>
+          <Inp value={data.duration || ""} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="e.g. 45 mins" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Price</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">{getCurrSym(data.currency)}</span>
+            <Inp type="number" className="pl-8" value={data.price || 0} onChange={e => setData({ ...data, price: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Currency</label>
+          <Sel value={data.currency || "INR"} onChange={e => setData({ ...data, currency: e.target.value })} options={["INR", "USD", "EUR"]} />
+        </div>
+      </div>
+      <div className="pt-6 border-t border-gray-100 flex justify-end gap-3">
+        <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
+        <Btn variant="success" onClick={() => onSave(data)}>Save Route</Btn>
+      </div>
+    </div>
+  );
+};

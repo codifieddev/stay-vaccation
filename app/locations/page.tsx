@@ -1,5 +1,6 @@
 import Navbar from "../components/frontend/Navbar";
 import Footer from "../components/frontend/Footer";
+import SearchBar from "../components/frontend/SearchBar";
 import Link from "next/link";
 
 export const metadata = {
@@ -71,8 +72,8 @@ export default function LocationsPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative hero-bg pt-32 pb-24 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative hero-bg pt-32 pb-24">
+        <div className="absolute inset-0 opacity-10 overflow-hidden">
           <svg className="w-full h-full" viewBox="0 0 1200 400">
             <circle cx="200" cy="200" r="300" stroke="white" strokeWidth="0.5" fill="none" />
             <circle cx="900" cy="100" r="200" stroke="white" strokeWidth="0.5" fill="none" />
@@ -88,17 +89,8 @@ export default function LocationsPage() {
             From tropical paradises to ancient civilizations — explore our handpicked destinations across every continent.
           </p>
           {/* Search */}
-          <div className="max-w-lg mx-auto">
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search destinations…"
-                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:border-[#2fa3f2] transition-colors text-sm"
-              />
-            </div>
+          <div className="max-w-lg mx-auto mb-20 relative z-50">
+            <SearchBar showButton={false} placeholder="Search destinations…" />
           </div>
         </div>
       </section>

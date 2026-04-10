@@ -1,0 +1,67 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getDatabase } from "../../../utils/getDatabase";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+export async function POST(req: NextRequest) {
+  try {
+    const { email, password } = await req.json();
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, message: "Email and password are required." },
+        { status: 400 }
+      );
+    }
+
+    const db = await getDatabase();
+    const user = await db.collection("users").findOne({
+      email: email.toLowerCase().trim(),
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Invalid email or password." },
+        { status: 401 }
+      );
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return NextResponse.json(
+        { success: false, message: "Invalid email or password." },
+        { status: 401 }
+      );
+    }
+
+    const token = jwt.sign(
+      { userId: user._id.toString(), role: user.role, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const res = NextResponse.json({
+      success: true,
+      role: user.role,
+      message: "Login successful",
+    });
+
+    res.cookies.set("sv_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
+    return res;
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    return NextResponse.json(
+      { success: false, message: "Server error." },
+      { status: 500 }
+    );
+  }
+}

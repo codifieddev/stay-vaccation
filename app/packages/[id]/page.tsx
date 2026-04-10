@@ -54,10 +54,14 @@ export default function SinglePackagePage() {
     fetch("/api/packages", { cache: "no-store" })
       .then(r => r.json())
       .then(d => {
-        if (d.success) {
-          console.log("PACKAGE IDS:", d.data.map((p:any) => p.id), "LOOKING FOR:", matchedId);
-          // Try matching ID, or fallback to slug if the URL was a slug
-          const found = d.data.find((p: any) => String(p.id) === String(matchedId) || String(p.slug) === String(matchedId));
+        if (d.success && Array.isArray(d.data)) {
+          // Robust matching: Check case-insensitive ID or Slug
+          const found = d.data.find((p: any) => {
+            const pid = String(p.id || "").toLowerCase();
+            const pslug = String(p.slug || "").toLowerCase();
+            const target = String(matchedId).toLowerCase();
+            return pid === target || pslug === target;
+          });
           setPkg(found || null);
         }
       })

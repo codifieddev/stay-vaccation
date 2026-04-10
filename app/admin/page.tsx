@@ -1,10 +1,11 @@
-import AdminPanel from "../components/AdminPanel";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Admin Panel — Stay Vacation",
-  description: "Stay Vacation admin panel for managing packages, hotels, activities, bookings, and coupons.",
+export const metadata: Metadata = {
+  title: "Admin Dashboard — Stay Vacation",
+  description: "Overview of packages, bookings, transfers and revenue on the Stay Vacation admin dashboard.",
 };
 
-export default function AdminPage() {
-  return <AdminPanel />;
+export default function AdminRootPage() {
+  redirect("/admin/dashboard");
 }

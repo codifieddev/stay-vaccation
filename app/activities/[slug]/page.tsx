@@ -1,9 +1,11 @@
+import { Metadata } from "next";
+import { getDatabase } from "@/app/utils/getDatabase";
+import { getDestinationBySlug } from "@/app/utils/getDestinations";
+import { getActivitiesByDestination } from "@/app/utils/getActivities";
 import ActivityPageContent from "./ActivityPageContent";
 import ActivityClientPage from "@/app/components/ActivityClientPage";
-import { getActivitiesByDestination } from "@/app/utils/getActivities";
-import { getDestinationBySlug } from "@/app/utils/getDestinations";
-import { getDatabase } from "@/app/utils/getDatabase";
-import { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 async function getActivityData(slug: string) {
   // 1. Try to fetch CMS Activity Page DIRECTLY FROM DB

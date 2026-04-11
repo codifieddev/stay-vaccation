@@ -1,8 +1,7 @@
-import { error } from 'console';
 import { MongoClient, Db, ObjectId } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add MONGODB_URI to .env.local!');
+  throw new Error('Please add MONGODB_URI to your environment variables!');
 }
 
 const uri = process.env.MONGODB_URI;
@@ -29,17 +28,18 @@ if (process.env.NODE_ENV === 'development') {
 export { clientPromise };
 
 export async function getDatabase(): Promise<Db> {
- 
-  const t = process.env.MONGODB_DB
+  const dbName = process.env.MONGODB_DB;
   const client = await clientPromise;
   
-  return client.db(t);
+  // Explicitly passing undefined to client.db() will use the default db from URI
+  // but it's better to be explicit if MONGODB_DB is provided.
+  return client.db(dbName);
 }
 
 export async function getTestDatabase(dbname: string): Promise<Db> {
   const client = await clientPromise;
   if (!dbname) {
-    throw error("No DB Name Found")
+    throw new Error("No DB Name Found");
   }
   return client.db(dbname);
 }
@@ -53,4 +53,4 @@ export function toObjectId(id: string): ObjectId {
 
 export function fromObjectId(id: ObjectId): string {
   return id.toString();
-}
+}

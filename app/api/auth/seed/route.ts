@@ -42,8 +42,22 @@ export async function POST() {
     }
 
     return NextResponse.json({ success: true, results });
-  } catch (err) {
-    console.error("SEED USERS ERROR:", err);
-    return NextResponse.json({ success: false }, { status: 500 });
+  } catch (err: any) {
+    console.error("SEED USERS ERROR DETAILS:", {
+      message: err.message,
+      stack: err.stack,
+      env: {
+        hasMongoUri: !!process.env.MONGODB_URI,
+      }
+    });
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: "Seed failed. Environment might missing MONGODB_URI.",
+        debug: process.env.NODE_ENV === "development" ? err.message : undefined
+      }, 
+      { status: 500 }
+    );
   }
 }
+

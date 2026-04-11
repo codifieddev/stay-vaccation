@@ -57,11 +57,24 @@ export async function POST(req: NextRequest) {
     });
 
     return res;
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
+  } catch (err: any) {
+    console.error("LOGIN ERROR DETAILS:", {
+      message: err.message,
+      stack: err.stack,
+      env: {
+        hasMongoUri: !!process.env.MONGODB_URI,
+        hasJwtSecret: !!process.env.JWT_SECRET,
+      }
+    });
+
     return NextResponse.json(
-      { success: false, message: "Server error." },
+      { 
+        success: false, 
+        message: "Server error during login.",
+        debug: process.env.NODE_ENV === "development" ? err.message : undefined 
+      },
       { status: 500 }
     );
   }
 }
+

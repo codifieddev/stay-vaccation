@@ -123,6 +123,7 @@ export interface ActivitiesPageActivity {
   duration: string;
   price: string | number;
   rating: string | number;
+  slug?: string;
 }
 
 export interface ActivitiesPageReview {
@@ -810,7 +811,7 @@ export const ActivityPageForm = ({ initial, onSave, onClose }: { initial: any; o
   const upd = (f: string, v: any) => setData(p => ({ ...p, [f]: v }));
   const updDesc = (f: string, v: string) => setData(p => ({ ...p, description: { ...p.description, [f]: v } }));
 
-  const addActivity = () => upd("activities", [...data.activities, { title: "", image: "", duration: "", price: "", rating: "" }]);
+  const addActivity = () => upd("activities", [...data.activities, { title: "", image: "", duration: "", price: "", rating: "", slug: "" }]);
   const updActivity = (i: number, f: string, v: any) => {
     const next = [...data.activities];
     next[i] = { ...next[i], [f]: v };
@@ -856,10 +857,13 @@ export const ActivityPageForm = ({ initial, onSave, onClose }: { initial: any; o
             <Card key={i} className="p-4 grid grid-cols-4 gap-3">
                <div className="col-span-3 space-y-3">
                  <Inp placeholder="Activity Title" value={act.title} onChange={e => updActivity(i, "title", e.target.value)} />
-                 <div className="grid grid-cols-3 gap-2">
+                 <div className="grid grid-cols-2 gap-2">
                    <Inp placeholder="Duration" value={act.duration} onChange={e => updActivity(i, "duration", e.target.value)} />
                    <Inp placeholder="Price (e.g. ₹999)" value={act.price} onChange={e => updActivity(i, "price", e.target.value)} />
+                 </div>
+                 <div className="grid grid-cols-2 gap-2">
                    <Inp placeholder="Rating" value={act.rating} onChange={e => updActivity(i, "rating", e.target.value)} />
+                   <Inp placeholder="Activity Slug (e.g. qasr-al-watan-tickets)" value={act.slug || ""} onChange={e => updActivity(i, "slug", e.target.value)} />
                  </div>
                </div>
                <div className="space-y-2">

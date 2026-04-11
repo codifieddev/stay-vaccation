@@ -1,0 +1,179 @@
+{
+  "activity": {
+    "id": "qasr-al-watan-abu-dhabi",
+    "title": "Qasr Al Watan Abu Dhabi Tickets",
+    "slug": "qasr-al-watan-tickets",
+    "location": "Abu Dhabi",
+    "rating": 4.8,
+    "total_reviews": 4480,
+    "category": [
+      "Cultural",
+      "Heritage",
+      "Sightseeing"
+    ],
+    "tags": [
+      "Presidential Palace",
+      "Architecture",
+      "History",
+      "Family"
+    ],
+    "pricing": {
+      "currency": "INR",
+      "original_price": 1896.38,
+      "discounted_price": 1517.11,
+      "discount_percent": 20,
+      "price_per": "Adult",
+      "offer_label": "SUMMER HOLIDAY SALE"
+    },
+    "ticket_types": [
+      {
+        "id": "admission-ticket",
+        "name": "Qasr Al Watan Admission Ticket",
+        "duration": "1 Days",
+        "original_price": 1896.38,
+        "discounted_price": 1517.11,
+        "price_per": "Adult",
+        "voucher_type": "Mobile Voucher"
+      }
+    ],
+    "highlights": [
+      "Visit Qasr Al Watan, the presidential palace of Abu Dhabi, and gain insights into the governance of the UAE's capital.",
+      "Marvel at the beauty of the palace's intricate domes, grand halls, and ornate design, showcasing the finest craftsmanship and traditional Arabian architecture.",
+      "Take a stroll through the large library at the Qasr Al Watan Palace, which features books on diverse topics such as history, biographies, archaeology, and more.",
+      "Relax in the beautifully landscaped gardens offering panoramic views of Abu Dhabi's skyline and the Arabian Gulf.",
+      "Enjoy watching the stunning light and sound show projected onto the palace's facade, narrating the UAE's journey of growth and innovation."
+    ],
+    "overview": {
+      "about": "Qasr Al Watan, nestled in the heart of Abu Dhabi, is an iconic palace that serves as the centre of governmental and diplomatic affairs. It is also a cultural landmark wherein travellers can explore the rich heritage of the United Arab Emirates. The palace is known for its intricate architecture, featuring grand halls adorned with Arabian artistry and a vast library housing a collection of historical manuscripts and artefacts.",
+      "know_before_you_go": [
+        "Kindly carry a valid ID proof while visiting the palace such as your passport copy or Emirates ID.",
+        "It is recommended to wear modest clothing (knees and shoulders should be covered) when in the palace."
+      ],
+      "things_to_carry": [
+        "Valid ID proof"
+      ],
+      "accessibility": [
+        "Wheelchair Accessible",
+        "Stroller Accessible"
+      ]
+    },
+    "policies": {
+      "confirmation": {
+        "booking_window_1": {
+          "time_range": "08:00 AM to 12:00 AM (UTC+05:30)",
+          "voucher_delivery": "within 1 hour of successful booking"
+        },
+        "booking_window_2": {
+          "time_range": "12:00 AM to 07:59 AM (UTC+05:30)",
+          "voucher_delivery": "within 9 hours of successful booking"
+        }
+      },
+      "cancellation": [
+        {
+          "days_before": "60+",
+          "charge_percent": 10
+        },
+        {
+          "days_before": "30-60",
+          "charge_percent": 25
+        },
+        {
+          "days_before": "15-30",
+          "charge_percent": 50
+        },
+        {
+          "days_before": "7-15",
+          "charge_percent": 75
+        },
+        {
+          "days_before": "0-7",
+          "charge_percent": 100
+        }
+      ],
+      "force_majeure": "In the event of unforeseen weather conditions, union issues, government restrictions, or any other circumstances beyond human control, certain trips or activities may be cancelled. Alternate feasible options will be provided. However, a cash refund will not be available."
+    },
+    "faqs": [
+      {
+        "id": 1,
+        "question": "What is Qasr Al Watan famous for?",
+        "answer": "Exhibiting the best of Arab heritage and brimming with vast pillars of knowledge, Qasr Al Watan will let you explore the local heritage in brief."
+      }
+    ],
+    "reviews": [
+      {
+        "reviewer": "Shinas Salim",
+        "rating": 5,
+        "label": "Excellent",
+        "comment": "The booking rate is very much discounted compared to direct booking.",
+        "photos_count": 8
+      },
+      {
+        "reviewer": "Ayaka Tanagura",
+        "rating": 5,
+        "label": "Excellent",
+        "comment": "",
+        "photos_count": 6
+      }
+    ],
+    "contact": {
+      "phone": "+918046287555",
+      "support_hours": "10:30 AM - 8:00 PM (Mon to Sat)"
+    },
+    "nearby_attractions": [
+      {
+        "id": "warner-bros-world",
+        "name": "Warner Bros. World",
+        "description": "An indoor theme park in Abu Dhabi and one of the most famous places to visit among kids, families and big kids alike.",
+        "slug": "warner-bros-world-abu-dhabi"
+      },
+      {
+        "id": "louvre-museum-abu-dhabi",
+        "name": "Louvre Museum Abu Dhabi",
+        "description": "An iconic and universal museum renowned as a premier cultural institution built in the heart of Saadiyat Cultural District.",
+        "slug": "louvre-museum-abu-dhabi"
+      },
+      {
+        "id": "grand-mosque-abu-dhabi",
+        "name": "Grand Mosque Abu Dhabi",
+        "description": "One of the most famous mosques in Abu Dhabi and a must-visit. This architectural show-stopper is one of the world's biggest.",
+        "slug": "grand-mosque-abu-dhabi"
+      },
+      {
+        "id": "ferrari-world",
+        "name": "Ferrari World",
+        "description": "One of the most wonderful theme parks of Dubai - The Ferrari world. Ferrari World Abu Dhabi is the ultimate experience.",
+        "slug": "ferrari-world-abu-dhabi"
+      },
+      {
+        "id": "jebel-hafeet",
+        "name": "Jebel Hafeet",
+        "description": "A sole mountain in the Emirate of Abu Dhabi, acclaimed as one of the exorbitant mountains in the country.",
+        "slug": "jebel-hafeet-abu-dhabi"
+      },
+      {
+        "id": "jubail-mangrove-park",
+        "name": "Jubail Mangrove Park",
+        "description": "One of the first contained leisure, nature and educational destinations of its kind in Abu Dhabi's Emirate.",
+        "slug": "jubail-mangrove-park-abu-dhabi"
+      }
+    ],
+    "meta": {
+      "platform": "Thrillophilia",
+      "total_bookings_last_7_days": 183,
+      "trust_badges": [
+        {
+          "label": "Verified Reviews",
+          "detail": "25000+ Pictures and Reviews on the platform."
+        },
+        {
+          "label": "10000+ Tours and Activities",
+          "detail": "Activities across 17 countries."
+        },
+        {
+          "label": "Customer Delight",
+          "detail": "Hassle-free experience support."
+        }
+      ]
+    }
+  }
+}

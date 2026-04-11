@@ -268,7 +268,38 @@ export default function Navbar() {
             })}
 
             <div className="pt-4 space-y-2" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+              {/* Mobile Activities Section */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setActivitiesMenuOpen(!activitiesMenuOpen)}
+                  className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium transition-all ${pathname.startsWith("/activities") ? "bg-[#2fa3f2]/20 text-[#2fa3f2]" : "text-white/80 hover:text-white hover:bg-white/10"}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Activities
+                  </span>
+                  <svg className={`w-4 h-4 transition-transform duration-200 ${activitiesMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                
+                {activitiesMenuOpen && (
+                  <div className="pl-6 space-y-1 mt-1">
+                    {activitiesPages.length > 0 ? (
+                      activitiesPages.map(p => (
+                        <Link key={p.slug} href={`/activities/${p.slug}`} 
+                          onClick={() => setMobileOpen(false)}
+                          className="block px-4 py-2.5 text-xs text-white/60 hover:text-[#2fa3f2] transition-colors">
+                          Things to do in {p.city}
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="px-4 py-2 text-xs text-white/30 italic">No activity pages yet</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <Link href="/packages"
+                onClick={() => setMobileOpen(false)}
                 className="flex items-center justify-center w-full px-4 py-3 bg-[#2fa3f2] text-white font-semibold rounded-xl">
                 Explore Packages
               </Link>
@@ -284,7 +315,7 @@ export default function Navbar() {
                       </div>
                     </div>
                     {user.role === "admin" && (
-                      <Link href="/admin" className="flex items-center justify-center w-full px-4 py-3 rounded-xl text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
+                      <Link href="/admin" onClick={() => setMobileOpen(false)} className="flex items-center justify-center w-full px-4 py-3 rounded-xl text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
                         Admin Panel
                       </Link>
                     )}

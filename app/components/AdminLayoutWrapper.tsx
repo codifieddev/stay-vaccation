@@ -17,15 +17,15 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
   const store = React.useContext(StoreContext);
   const counts = store
     ? {
-        packages: store.packages.length,
-        activities: store.masterActivities.length,
-        hotels: store.masterHotels.length,
-        coupons: store.coupons.length,
-        bookings: 0,
-        transfers: store.transfers.length,
-        destinations: store.destinations.length,
-        activityPages: store.activityPages.length,
-      }
+      packages: store.packages.length,
+      activities: store.masterActivities.length,
+      hotels: store.masterHotels.length,
+      coupons: store.coupons.length,
+      bookings: 0,
+      transfers: store.transfers.length,
+      destinations: store.destinations.length,
+      activityPages: store.activityPages.length,
+    }
     : { packages: 0, activities: 0, hotels: 0, coupons: 0, bookings: 0, transfers: 0, destinations: 0, activityPages: 0 };
 
   const PAGE_META: Record<string, { title: string; subtitle: string }> = {

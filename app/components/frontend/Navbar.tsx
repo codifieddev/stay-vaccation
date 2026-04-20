@@ -139,7 +139,7 @@ export default function Navbar() {
                     <div className="bg-[#1a3f4e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 backdrop-blur-xl">
                       {activitiesPages.length > 0 ? (
                         activitiesPages.map(p => (
-                          <Link key={p.slug} href={`/activities/${p.slug}`} className="block px-5 py-2.5 text-sm text-white/80 hover:bg-[#2fa3f2] hover:text-white transition-colors">
+                          <Link key={p.slug} href={`/destinations/${p.slug}`} className="block px-5 py-2.5 text-sm text-white/80 hover:bg-[#2fa3f2] hover:text-white transition-colors">
                             Things to do in {p.city}
                           </Link>
                         ))
@@ -297,7 +297,7 @@ export default function Navbar() {
                   <div className="pl-6 space-y-1 mt-1">
                     {activitiesPages.length > 0 ? (
                       activitiesPages.map(p => (
-                        <Link key={p.slug} href={`/activities/${p.slug}`} 
+                        <Link key={p.slug} href={`/destinations/${p.slug}`} 
                           onClick={() => setMobileOpen(false)}
                           className="block px-4 py-2.5 text-xs text-white/60 hover:text-[#2fa3f2] transition-colors">
                           Things to do in {p.city}

@@ -9,6 +9,11 @@ export async function POST(req: NextRequest) {
     const db = await getDatabase();
 
     const { _id, ...insertData } = body;
+    
+    // Auto-generate or format slug from name
+    if (insertData.name) {
+      insertData.slug = insertData.name.toLowerCase().trim().replace(/\s+/g, '-');
+    }
 
     const result = await db.collection("destinations").insertOne({
       ...insertData,
@@ -59,6 +64,12 @@ export async function PUT(req: NextRequest) {
     const db = await getDatabase();
 
     const { _id, ...updateData } = body;
+
+    // Auto-generate or format slug from name
+    if (updateData.name) {
+      updateData.slug = updateData.name.toLowerCase().trim().replace(/\s+/g, '-');
+    }
+
     const queryId = /^[0-9a-fA-F]{24}$/.test(_id) ? new ObjectId(_id) : _id;
 
     await db.collection("destinations").updateOne(

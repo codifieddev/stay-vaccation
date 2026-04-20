@@ -1383,6 +1383,8 @@ export const DestinationsPage = () => {
 export const DestinationForm = ({ initial, onSave, onCancel }) => {
   const [data, setData] = useState(initial || { name: "", slug: "", image: "", description: "", isEnabled: true });
   
+  const slugify = (text: string) => text.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+
   const upd = (f, v) => setData(p => ({ ...p, [f]: v }));
 
   return (
@@ -1396,11 +1398,18 @@ export const DestinationForm = ({ initial, onSave, onCancel }) => {
             onChange={e => setData({ 
               ...data, 
               name: e.target.value, 
-              slug: e.target.value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') 
+              slug: slugify(e.target.value) 
             })} 
           />
         </div>
-        <div><FL required>Slug</FL><Inp placeholder="e.g. dubai" value={data.slug} onChange={e => upd("slug", e.target.value)} /></div>
+        <div>
+          <FL required>Slug</FL>
+          <Inp 
+            placeholder="e.g. dubai" 
+            value={data.slug} 
+            onChange={e => upd("slug", slugify(e.target.value))} 
+          />
+        </div>
       </div>
       
       <div><FL>Description</FL><TA value={data.description} onChange={e => upd("description", e.target.value)} rows={3} placeholder="A brief overview of this destination..." /></div>

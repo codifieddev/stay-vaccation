@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 export interface Destination {
   _id?: string;
-  name: string;
+  title: string;
   slug: string;
   icon?: string;
   image?: string;
@@ -16,13 +16,85 @@ export interface Destination {
   description?: string;
 }
 
-export default function TrendingDestinations({ destinations = [] }: { destinations?: Destination[] }) {
+const FALLBACK_DESTINATIONS: Destination[] = [
+  // INDIA & AROUND
+  { title: "Kashmir", slug: "kashmir", image: "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Paradise on Earth", price: 12499 },
+  { title: "Goa", slug: "goa", image: "https://images.unsplash.com/photo-1512356181113-853a150f1ea7?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Sun, Sand & Sea", price: 8999 },
+  { title: "Himachal", slug: "himachal", image: "https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Valley of Gods", price: 9999 },
+  { title: "Manali", slug: "manali", image: "https://images.unsplash.com/photo-1594142571210-9cf63657739f?q=80&w=1974&auto=format&fit=crop", type: "india", label: "Mountain Escapes", price: 7499 },
+  { title: "Kerala", slug: "kerala", image: "https://images.unsplash.com/photo-1593693397690-362cb9666fc2?q=80&w=2069&auto=format&fit=crop", type: "india", label: "Backwater Bliss", price: 11499 },
+  { title: "Jaipur", slug: "jaipur", image: "https://images.unsplash.com/photo-1603262110263-fb0112e7cc33?q=80&w=2071&auto=format&fit=crop", type: "india", label: "The Pink City", price: 6999 },
+  { title: "Munnar", slug: "munnar", image: "https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Tea Garden Serenity", price: 8499 },
+  { title: "Andaman", slug: "andaman", image: "https://images.unsplash.com/photo-1589330273594-fade1ee91647?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Crystal Waters", price: 21499 },
+  { title: "Leh Ladakh", slug: "leh-ladakh", image: "https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?q=80&w=2070&auto=format&fit=crop", type: "india", label: "High Pass Adventure", price: 18999 },
+
+  // INTERNATIONAL
+  { title: "Thailand", slug: "thailand", image: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Tropical Gateway", price: 34999 },
+  { title: "Bali", slug: "bali", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1938&auto=format&fit=crop", type: "international", label: "Island of Gods", price: 42999 },
+  { title: "Dubai", slug: "dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Luxury & Innovation", price: 54999 },
+  { title: "Paris", slug: "paris", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop", type: "international", label: "City of Love", price: 124999 },
+  { title: "Tokyo", slug: "tokyo", image: "https://images.unsplash.com/photo-1540959733332-e94e270b2d42?q=80&w=2041&auto=format&fit=crop", type: "international", label: "Future & Heritage", price: 89999 },
+  { title: "Switzerland", slug: "switzerland", image: "https://images.unsplash.com/photo-1527668752968-14dc70a27c95?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Alpine Escapes", price: 154999 },
+  { title: "Singapore", slug: "singapore", image: "https://images.unsplash.com/photo-1525625239514-75b436f0102b?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Garden City", price: 44999 },
+  { title: "Santorini", slug: "santorini", image: "https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Aegean Dream", price: 164999 },
+  { title: "London", slug: "london", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=2070&auto=format&fit=crop", type: "international", label: "Historic Splendour", price: 114999 },
+];
+
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop";
+
+function DestinationCardImage({ src, alt }: { src?: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src || DEFAULT_IMAGE);
+
+  return (
+    <Image 
+      src={imgSrc} 
+      alt={alt}
+      fill
+      className="object-cover opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out"
+      onError={() => setImgSrc(DEFAULT_IMAGE)}
+    />
+  );
+}
+
+export default function TrendingDestinations({ destinations: initialDestinations = [] }: { destinations?: Destination[] }) {
   const [activeTab, setActiveTab] = useState<"india" | "international">("india");
+  const [items, setItems] = useState<Destination[]>(initialDestinations);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Filter based on the selected type, case insensitive check for robustness. 
-  // If no destinations are returned, maybe default type data is missing.
-  const filteredDestinations = destinations.filter(dest => {
+  useEffect(() => {
+    fetch("/api/destinations")
+      .then(res => res.json())
+      .then(data => {
+        console.log("Trending Destinations API Response:", data);
+        if (data.success && data.data) {
+          // Schema Validation: title, slug, image, type
+          const validItems = data.data.filter((item: any) => {
+            const isValid = item.title && item.slug && item.image && item.type;
+            if (!isValid) {
+              console.warn("Skipping destination due to missing required fields (title, slug, image, type):", item);
+            }
+            return isValid;
+          });
+
+          if (validItems.length === 0) {
+            console.warn("DB is empty or data is invalid. Showing fallback dummy destinations.");
+            setItems(FALLBACK_DESTINATIONS);
+          } else {
+            setItems(validItems);
+          }
+        } else {
+          // If API fails or success is false, use fallback
+          setItems(FALLBACK_DESTINATIONS);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching trending destinations:", err);
+        setItems(FALLBACK_DESTINATIONS);
+      });
+  }, []);
+
+  // Filter based on the selected type, case insensitive check for robustness.
+  const filteredDestinations = items.filter(dest => {
     const destType = (dest.type || "").toLowerCase().trim();
     if (activeTab === "india") {
       return destType === "india";
@@ -126,32 +198,12 @@ export default function TrendingDestinations({ destinations = [] }: { destinatio
                 >
                   {/* Image Area Background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-[#1a3f4e] via-[#2a5f74] to-[#1a7abf]">
-                    {dest.image ? (
-                      <Image 
-                        src={dest.image} 
-                        alt={dest.name || "Destination"}
-                        fill
-                        className="object-cover opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out"
-                      />
-                    ) : (
-                      <>
-                        <div className="absolute inset-0 opacity-20">
-                          <svg className="w-full h-full" viewBox="0 0 400 200" fill="none">
-                            <path d="M0 100 Q 100 0, 200 100 T 400 100" stroke="white" fill="none" strokeWidth="0.5" />
-                            <circle cx="300" cy="50" r="120" stroke="white" strokeWidth="0.5" />
-                            <circle cx="100" cy="180" r="80" stroke="white" strokeWidth="0.5" />
-                          </svg>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center text-[90px] opacity-30 group-hover:scale-125 transition-transform duration-700 ease-out">
-                          {dest.icon || "📍"}
-                        </div>
-                      </>
-                    )}
+                    <DestinationCardImage src={dest.image} alt={dest.title || "Destination"} />
                   </div>
                   
                   {/* Always Visible Content Overlay */}
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-500 flex flex-col items-center justify-center p-6 text-center z-10">
-                  <h3 className="text-white font-display font-bold text-3xl leading-tight mb-2 group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.name}</h3>
+                  <h3 className="text-white font-display font-bold text-3xl leading-tight mb-2 group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.title}</h3>
                   <p className="text-white/80 font-medium text-sm group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.label}</p>
                 </div>
 
@@ -171,9 +223,17 @@ export default function TrendingDestinations({ destinations = [] }: { destinatio
               </Link>
             ))
             ) : (
-              <div className="flex-1 flex flex-col justify-center items-center py-20 text-gray-400">
-                <svg className="w-12 h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <p>New destinations coming soon</p>
+              <div className="flex-1 flex flex-col justify-center items-center py-20 bg-gray-50/50 rounded-[40px] border-2 border-dashed border-gray-100 min-h-[360px]">
+                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <h4 className="text-[#1a3f4e] font-bold text-xl mb-2">No destinations available</h4>
+                <p className="text-gray-400 text-sm max-w-[280px] text-center leading-relaxed">
+                  We couldn't find any destinations for this category yet. Check back soon for new getaways!
+                </p>
               </div>
             )}
           </div>

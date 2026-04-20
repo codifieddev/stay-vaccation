@@ -17,7 +17,7 @@ export interface Destination {
 }
 
 const FALLBACK_DESTINATIONS: Destination[] = [
-  // INDIA & AROUND
+  // INDIA 
   { title: "Kashmir", slug: "kashmir", image: "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Paradise on Earth", price: 12499 },
   { title: "Goa", slug: "goa", image: "https://images.unsplash.com/photo-1512356181113-853a150f1ea7?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Sun, Sand & Sea", price: 8999 },
   { title: "Himachal", slug: "himachal", image: "https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Valley of Gods", price: 9999 },
@@ -46,8 +46,8 @@ function DestinationCardImage({ src, alt }: { src?: string; alt: string }) {
   const [imgSrc, setImgSrc] = useState(src || DEFAULT_IMAGE);
 
   return (
-    <Image 
-      src={imgSrc} 
+    <Image
+      src={imgSrc}
       alt={alt}
       fill
       className="object-cover opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out"
@@ -131,27 +131,25 @@ export default function TrendingDestinations({ destinations: initialDestinations
             <p className="text-[#2fa3f2] font-semibold text-sm uppercase tracking-widest mb-2 md:text-left text-center">Top Picks</p>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-[#1a3f4e] text-center md:text-left">Trending Holiday Destinations</h2>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Toggle Buttons */}
             <div className="flex bg-gray-100 p-1 rounded-full shrink-0">
               <button
                 onClick={() => handleTabChange("india")}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  activeTab === "india" 
-                    ? "bg-white text-[#1a3f4e] shadow-sm" 
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === "india"
+                    ? "bg-white text-[#1a3f4e] shadow-sm"
                     : "text-gray-500 hover:text-[#1a3f4e]"
-                }`}
+                  }`}
               >
-                India & Around
+                India
               </button>
               <button
                 onClick={() => handleTabChange("international")}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  activeTab === "international" 
-                    ? "bg-white text-[#1a3f4e] shadow-sm" 
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === "international"
+                    ? "bg-white text-[#1a3f4e] shadow-sm"
                     : "text-gray-500 hover:text-[#1a3f4e]"
-                }`}
+                  }`}
               >
                 International
               </button>
@@ -159,15 +157,15 @@ export default function TrendingDestinations({ destinations: initialDestinations
 
             {/* Navigation Arrows */}
             <div className="hidden md:flex gap-2">
-              <button 
-                onClick={scrollLeft} 
+              <button
+                onClick={scrollLeft}
                 className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-[#2fa3f2] hover:text-white hover:border-[#2fa3f2] transition-colors focus:outline-none"
                 aria-label="Scroll left"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
-              <button 
-                onClick={scrollRight} 
+              <button
+                onClick={scrollRight}
                 className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-[#2fa3f2] hover:text-white hover:border-[#2fa3f2] transition-colors focus:outline-none"
                 aria-label="Scroll right"
               >
@@ -183,9 +181,9 @@ export default function TrendingDestinations({ destinations: initialDestinations
           <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none hidden md:block" />
 
           {/* scrollbar-width: none is available natively in many modern browsers, masking scrollbar but allowing scroll */}
-          <div 
+          <div
             ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x snap-mandatory scrollbar-hide md:-mx-4 md:px-4 [&::-webkit-scrollbar]:hidden" 
+            className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x snap-mandatory scrollbar-hide md:-mx-4 md:px-4 [&::-webkit-scrollbar]:hidden"
             style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
           >
             {filteredDestinations.length > 0 ? (
@@ -200,28 +198,28 @@ export default function TrendingDestinations({ destinations: initialDestinations
                   <div className="absolute inset-0 bg-gradient-to-br from-[#1a3f4e] via-[#2a5f74] to-[#1a7abf]">
                     <DestinationCardImage src={dest.image} alt={dest.title || "Destination"} />
                   </div>
-                  
-                  {/* Always Visible Content Overlay */}
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-500 flex flex-col items-center justify-center p-6 text-center z-10">
-                  <h3 className="text-white font-display font-bold text-3xl leading-tight mb-2 group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.title}</h3>
-                  <p className="text-white/80 font-medium text-sm group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.label}</p>
-                </div>
 
-                {/* Hover Overlay at Bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-8 pt-12 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center text-center opacity-0 translate-y-8 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out z-20">
-                  <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">Starting at</p>
-                  <p className="text-white font-bold text-2xl mb-4">₹ {dest.price}</p>
-                  
-                  {/* Arrow Button */}
-                  <div className="w-12 h-12 bg-[#2fa3f2] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-white hover:text-[#2fa3f2] transition-colors duration-300">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                  {/* Always Visible Content Overlay */}
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-500 flex flex-col items-center justify-center p-6 text-center z-10">
+                    <h3 className="text-white font-display font-bold text-3xl leading-tight mb-2 group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.title}</h3>
+                    <p className="text-white/80 font-medium text-sm group-hover:-translate-y-8 transition-transform duration-500 ease-out">{dest.label}</p>
                   </div>
-                </div>
-                
-              </Link>
-            ))
+
+                  {/* Hover Overlay at Bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-8 pt-12 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center text-center opacity-0 translate-y-8 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out z-20">
+                    <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">Starting at</p>
+                    <p className="text-white font-bold text-2xl mb-4">₹ {dest.price}</p>
+
+                    {/* Arrow Button */}
+                    <div className="w-12 h-12 bg-[#2fa3f2] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-white hover:text-[#2fa3f2] transition-colors duration-300">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </div>
+                  </div>
+
+                </Link>
+              ))
             ) : (
               <div className="flex-1 flex flex-col justify-center items-center py-20 bg-gray-50/50 rounded-[40px] border-2 border-dashed border-gray-100 min-h-[360px]">
                 <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-6">
@@ -241,8 +239,8 @@ export default function TrendingDestinations({ destinations: initialDestinations
 
         {/* Call to Action */}
         <div className="text-center mt-12 mb-4">
-          <Link 
-            href="/destinations" 
+          <Link
+            href="/destinations"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-white border border-[#1a3f4e] text-[#1a3f4e] font-bold rounded-full hover:bg-[#1a3f4e] hover:text-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
             Explore Now

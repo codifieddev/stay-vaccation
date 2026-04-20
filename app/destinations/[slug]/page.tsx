@@ -20,7 +20,7 @@ interface Destination {
 }
 
 const FALLBACK_DESTINATIONS: Destination[] = [
-  // INDIA & AROUND
+  // INDIA
   { title: "Kashmir", slug: "kashmir", image: "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Paradise on Earth" },
   { title: "Goa", slug: "goa", image: "https://images.unsplash.com/photo-1512356181113-853a150f1ea7?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Sun, Sand & Sea" },
   { title: "Himachal", slug: "himachal", image: "https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=2070&auto=format&fit=crop", type: "india", label: "Valley of Gods" },
@@ -83,8 +83,8 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
           <p className="text-gray-500 max-w-md mx-auto mb-10 leading-relaxed">
             The destination <span className="font-bold text-red-500">"{slug}"</span> doesn't seem to exist or has been moved. Explore our other trending locations instead!
           </p>
-          <Link 
-            href="/locations" 
+          <Link
+            href="/locations"
             className="px-10 py-4 bg-[#2fa3f2] text-white font-bold rounded-full hover:shadow-[0_0_20px_rgba(47,163,242,0.4)] transition-all"
           >
             Explore All Destinations
@@ -108,7 +108,7 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
   // If the destination has a real database ID, add it to the search criteria
   if (destination._id && /^[0-9a-fA-F]{24}$/.test(destination?._id?.toString() || "")) {
     query.$or.push({ destinationId: new ObjectId(destination._id) });
-    query.$or.push({ destinationId: destination._id.toString() }); 
+    query.$or.push({ destinationId: destination._id.toString() });
   }
 
   const packages = await db.collection("packages").find(query).toArray();
@@ -132,7 +132,7 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
           priority
         />
         <div className="absolute inset-0 bg-black/40" />
-        
+
         <div className="container-sv relative z-10 text-center text-white">
           {/* Breadcrumb */}
           <nav className="flex items-center justify-center gap-2 mb-6 text-sm font-medium text-white/60">
@@ -144,7 +144,7 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
           </nav>
 
           <p className="text-[#2fa3f2] font-semibold text-sm uppercase tracking-widest mb-4 drop-shadow-md">
-            {destination.type === "india" ? "India & Around" : "International Gateway"}
+            {destination.type === "india" ? "India" : "International Gateway"}
           </p>
           <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 drop-shadow-lg">
             {destination.title}
@@ -162,9 +162,9 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
       {/* Packages Section */}
       <section className="section-pad flex-1">
         <div className="container-sv">
-          <FilteredPackageList 
-            packages={normalizedPackages} 
-            destinationTitle={destination.title} 
+          <FilteredPackageList
+            packages={normalizedPackages}
+            destinationTitle={destination.title}
           />
         </div>
       </section>
@@ -172,9 +172,9 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
       {/* Explore More */}
       <section className="py-20 bg-[#1a3f4e] text-white overflow-hidden relative">
         <div className="absolute top-0 right-0 opacity-10 translate-x-1/4 -translate-y-1/4">
-           <svg className="w-[600px] h-[600px]" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="white" /></svg>
+          <svg className="w-[600px] h-[600px]" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="white" /></svg>
         </div>
-        
+
         <div className="container-sv relative z-10 text-center">
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-6">Want something custom built?</h2>
           <p className="text-white/60 mb-10 max-w-xl mx-auto text-lg leading-relaxed">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, Inp, FL, TA, Btn, ImageUploader, Ic } from "@/app/components/AdminCore";
+import { apiFetch } from "@/app/store/apiUtils";
 
 export default function BusinessSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -18,40 +19,35 @@ export default function BusinessSettingsPage() {
   });
 
   useEffect(() => {
-    fetch("/api/business-settings").then(r => r.json()).then(res => {
-      if(res.success && res.data) {
-        setForm({
-          businessName: res.data.businessName || "",
-          address: res.data.address || "",
-          phoneNumber: res.data.phoneNumber || "",
-          email: res.data.email || "",
-          logo: res.data.logo || "",
-          facebook: res.data.facebook || "",
-          instagram: res.data.instagram || "",
-          twitter: res.data.twitter || "",
-          footerText: res.data.footerText || ""
-        });
-      }
+    apiFetch<any>("/api/business-settings").then(data => {
+      setForm({
+        businessName: data.businessName || "",
+        address: data.address || "",
+        phoneNumber: data.phoneNumber || "",
+        email: data.email || "",
+        logo: data.logo || "",
+        facebook: data.facebook || "",
+        instagram: data.instagram || "",
+        twitter: data.twitter || "",
+        footerText: data.footerText || ""
+      });
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to fetch settings", err);
       setLoading(false);
     });
   }, []);
 
   const handleSave = async () => {
     try {
-      const res = await fetch("/api/business-settings", {
+      const data = await apiFetch<any>("/api/business-settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-      const data = await res.json();
-      if(data.success) {
-        alert("Settings saved successfully! ✅");
-      } else {
-        alert("Failed to save settings: " + (data.message || ""));
-      }
-    } catch(err) {
+      alert(data.message || "Settings saved successfully! ✅");
+    } catch(err: any) {
       console.error(err);
-      alert("Error saving settings");
+      alert("Error saving settings: " + err.message);
     }
   };
 

@@ -97,7 +97,7 @@ export default function PackagesPageContent() {
       if (createPackage.fulfilled.match(resultAction)) {
         const result = resultAction.payload as any;
         setDuplicateModalOpen(false);
-        router.push(`/admin/packages/edit/${result._id || result.id}`);
+        router.push(`/admin/packages/edit/${result.insertedId || result.id}`);
       } else {
         alert("Duplicate failed: " + (resultAction.error?.message || "Unknown error"));
       }

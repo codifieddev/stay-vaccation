@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await db.collection("destinations").insertOne({
+      isTrending: false,
+      status: "Draft",
+      displayOrder: 0,
       ...insertData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -45,6 +48,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const trendingOnly = searchParams.get("trending") === "true";
+    const category = searchParams.get("category");
     const db = await getDatabase();
 
     if (id) {
@@ -63,25 +68,46 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const destinations = await db.collection("destinations").find().toArray();
+    const query: any = {};
+    if (trendingOnly) {
+      query.isTrending = true;
+      query.status = "Visible";
+    }
+    if (category) query.category = category;
+
+    const destinations = await db.collection("destinations").find(query).sort({ displayOrder: 1 }).toArray();
     
-    // Fetch real package counts
-    const packageCounts = await db.collection("packages").aggregate([
-      { $group: { _id: "$destinationSlug", count: { $sum: 1 } } }
+    // Fetch real package counts and starting prices
+    const packageStats = await db.collection("packages").aggregate([
+      {
+        $group: {
+          _id: "$destinationSlug",
+          count: { $sum: 1 },
+          minPrice: { $min: { $toDouble: "$price.amount" } }
+        }
+      }
     ]).toArray();
     
-    const countMap: Record<string, number> = {};
-    packageCounts.forEach(pc => {
-      if (pc._id) countMap[pc._id] = pc.count;
+    const statsMap: Record<string, { count: number; minPrice: number }> = {};
+    packageStats.forEach(ps => {
+      if (ps._id) statsMap[ps._id] = { count: ps.count, minPrice: ps.minPrice };
     });
+
+    const hideEmpty = searchParams.get("hideEmpty") === "true";
 
     const normalized = destinations.map(d => ({
       ...d,
       _id: d._id.toString(),
-      packageCount: countMap[d.slug] || 0
+      packageCount: statsMap[d.slug]?.count || 0,
+      startingPrice: statsMap[d.slug]?.minPrice || 0
     }));
 
-    return NextResponse.json({ success: true, data: normalized }, {
+    // Filter by package count if requested
+    const filtered = (trendingOnly || hideEmpty)
+      ? normalized.filter(d => d.packageCount > 0)
+      : normalized;
+
+    return NextResponse.json({ success: true, data: filtered }, {
       headers: {
         "Cache-Control": "no-store, max-age=0",
       },

@@ -13,6 +13,7 @@ import businessSettingsReducer from "./features/businessSettings/businessSetting
 import adminReducer from "./features/admin/adminSlice";
 import bookingReducer from "./features/bookings/bookingSlice";
 import searchReducer from "./features/search/searchSlice";
+import currencyReducer from "./features/currency/currencySlice";
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     admin: adminReducer,
     bookings: bookingReducer,
     search: searchReducer,
+    currency: currencyReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

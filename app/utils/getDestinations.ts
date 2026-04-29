@@ -15,9 +15,29 @@ export async function getDestinationBySlug(slug: string) {
 export async function getAllDestinations() {
   try {
     const db = await getDatabase();
-    const destinations = await db.collection("destinations").find({ isEnabled: true }).toArray();
+    const destinations = await db.collection("destinations").find({ 
+      $or: [
+        { status: "Visible" },
+        { isEnabled: true, status: { $exists: false } }
+      ]
+    }).sort({ displayOrder: 1 }).toArray();
     
-    return JSON.parse(JSON.stringify(destinations));
+    // Fetch real package counts
+    const packageCounts = await db.collection("packages").aggregate([
+      { $group: { _id: "$destinationSlug", count: { $sum: 1 } } }
+    ]).toArray();
+    
+    const countMap: Record<string, number> = {};
+    packageCounts.forEach(pc => {
+      if (pc._id) countMap[pc._id] = pc.count;
+    });
+
+    const normalized = destinations.map(d => ({
+      ...JSON.parse(JSON.stringify(d)),
+      packageCount: countMap[d.slug] || 0
+    }));
+
+    return normalized;
   } catch (error) {
     console.error("Error fetching all destinations:", error);
     return [];

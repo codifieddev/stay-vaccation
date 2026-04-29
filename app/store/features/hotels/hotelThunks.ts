@@ -26,14 +26,14 @@ export const createHotel = createAsyncThunk("hotels/createHotel", async (hotel: 
 });
 
 export const updateHotel = createAsyncThunk("hotels/updateHotel", async (hotel: MasterHotel) => {
-  return apiFetch<MasterHotel>(`/api/hotels/${hotel._id}`, {
+  return apiFetch<MasterHotel>(`/api/hotels`, {
     method: "PUT",
     body: JSON.stringify(hotel),
   });
 });
 
 export const deleteHotel = createAsyncThunk("hotels/deleteHotel", async (id: string) => {
-  await apiFetch(`/api/hotels/${id}`, {
+  await apiFetch(`/api/hotels?id=${id}`, {
     method: "DELETE",
   });
   return id;

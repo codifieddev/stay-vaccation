@@ -26,14 +26,14 @@ export const createActivity = createAsyncThunk("activities/createActivity", asyn
 });
 
 export const updateActivity = createAsyncThunk("activities/updateActivity", async (activity: MasterActivity) => {
-  return apiFetch<MasterActivity>(`/api/activities/${activity._id}`, {
+  return apiFetch<MasterActivity>(`/api/activities`, {
     method: "PUT",
     body: JSON.stringify(activity),
   });
 });
 
 export const deleteActivity = createAsyncThunk("activities/deleteActivity", async (id: string) => {
-  await apiFetch(`/api/activities/${id}`, {
+  await apiFetch(`/api/activities?id=${id}`, {
     method: "DELETE",
   });
   return id;

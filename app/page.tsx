@@ -6,6 +6,8 @@ import TrendingDestinations from "./components/frontend/TrendingDestinations";
 import Link from "next/link";
 import { getAllDestinations } from "./utils/getDestinations";
 
+export const dynamic = "force-dynamic";
+
 async function getPackages() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";

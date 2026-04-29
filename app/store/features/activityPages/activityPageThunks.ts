@@ -26,15 +26,15 @@ export const createActivityPage = createAsyncThunk("activityPages/createActivity
 });
 
 export const updateActivityPage = createAsyncThunk("activityPages/updateActivityPage", async (page: ActivityPage) => {
-  return apiFetch<ActivityPage>(`/api/activity-pages/${page._id}`, {
+  return apiFetch<ActivityPage>(`/api/activity-pages/${page.slug}`, {
     method: "PUT",
     body: JSON.stringify(page),
   });
 });
 
-export const deleteActivityPage = createAsyncThunk("activityPages/deleteActivityPage", async (id: string) => {
-  await apiFetch(`/api/activity-pages/${id}`, {
+export const deleteActivityPage = createAsyncThunk("activityPages/deleteActivityPage", async (slug: string) => {
+  await apiFetch(`/api/activity-pages/${slug}`, {
     method: "DELETE",
   });
-  return id;
+  return slug;
 });

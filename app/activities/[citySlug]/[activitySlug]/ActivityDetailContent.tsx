@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Navbar from "@/app/components/frontend/Navbar";
 import Footer from "@/app/components/frontend/Footer";
 import Link from "next/link";
+import { useCurrency } from "@/app/hooks/useCurrency";
 
 interface ActivityDetail {
   id: string;
@@ -52,6 +53,7 @@ interface ActivityDetail {
 export default function ActivityDetailContent({ activity }: { activity: ActivityDetail }) {
   const [activeTab, setActiveTab] = useState("Overview");
   const [scrolled, setScrolled] = useState(false);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 400);
@@ -206,8 +208,12 @@ export default function ActivityDetailContent({ activity }: { activity: Activity
                               </div>
                            </div>
                            <div className="text-right">
-                              <div className="text-xs text-gray-400 line-through">₹{ticket.original_price.toLocaleString()}</div>
-                              <div className="text-3xl font-black text-[#1a3f4e]">₹{ticket.discounted_price.toLocaleString()}</div>
+                              <div className="text-xs text-gray-400 line-through">
+                                 {formatPrice(ticket.original_price)}
+                              </div>
+                              <div className="text-3xl font-black text-[#1a3f4e]">
+                                 {formatPrice(ticket.discounted_price)}
+                              </div>
                               <div className="text-[10px] font-black text-gray-400 uppercase">per {ticket.price_per}</div>
                               <button className="mt-4 px-8 py-3 bg-[#2fa3f2] text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#1a3f4e] transition-all">
                                  Select Ticket
@@ -295,8 +301,12 @@ export default function ActivityDetailContent({ activity }: { activity: Activity
                           </span>
                        </div>
                        <div className="flex items-end gap-2 mb-2">
-                          <span className="text-4xl font-black">₹{activity.pricing?.discounted_price.toLocaleString()}</span>
-                          <span className="text-white/40 text-sm line-through mb-1">₹{activity.pricing?.original_price.toLocaleString()}</span>
+                          <span className="text-4xl font-black">
+                             {formatPrice(activity.pricing?.discounted_price || 0)}
+                          </span>
+                          <span className="text-white/40 text-sm line-through mb-1">
+                             {formatPrice(activity.pricing?.original_price || 0)}
+                          </span>
                        </div>
                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
                           Per {activity.pricing?.price_per} Inclusive of all taxes

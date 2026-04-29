@@ -21,7 +21,7 @@ export const fetchDestinations = createAsyncThunk(
 export const fetchTrending = createAsyncThunk(
   "destinations/fetchTrending",
   async (category: "India" | "International") => {
-    const data = await apiFetch<Destination[]>(`/api/destinations?trending=true&category=${category}`);
+    const data = await apiFetch<Destination[]>(`/api/destinations?trending=true&category=${category}&hideEmpty=true`);
     return { data, category };
   }
 );
@@ -34,14 +34,14 @@ export const createDestination = createAsyncThunk("destinations/createDestinatio
 });
 
 export const updateDestination = createAsyncThunk("destinations/updateDestination", async (dest: Destination) => {
-  return apiFetch<Destination>(`/api/destinations/${dest._id}`, {
+  return apiFetch<Destination>(`/api/destinations`, {
     method: "PUT",
     body: JSON.stringify(dest),
   });
 });
 
 export const deleteDestination = createAsyncThunk("destinations/deleteDestination", async (id: string) => {
-  await apiFetch(`/api/destinations/${id}`, {
+  await apiFetch(`/api/destinations?id=${id}`, {
     method: "DELETE",
   });
   return id;

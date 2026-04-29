@@ -26,7 +26,7 @@ export const createTransfer = createAsyncThunk("transfers/createTransfer", async
 });
 
 export const updateTransfer = createAsyncThunk("transfers/updateTransfer", async (transfer: TransferRecord) => {
-  return apiFetch<TransferRecord>(`/api/transfers/${transfer._id}`, {
+  return apiFetch<TransferRecord>(`/api/transfers`, {
     method: "PUT",
     body: JSON.stringify(transfer),
   });

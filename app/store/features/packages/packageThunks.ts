@@ -26,7 +26,7 @@ export const createPackage = createAsyncThunk("packages/createPackage", async (p
 });
 
 export const updatePackage = createAsyncThunk("packages/updatePackage", async (pkg: Package) => {
-  return apiFetch<Package>(`/api/packages/${pkg.id || (pkg as any)._id}`, {
+  return apiFetch<Package>(`/api/packages`, {
     method: "PUT",
     body: JSON.stringify(pkg),
   });

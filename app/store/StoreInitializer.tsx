@@ -11,9 +11,10 @@ import { fetchCategories } from "./features/categories/categoryThunks";
 import { fetchRegions } from "./features/regions/regionThunks";
 import { fetchCoupons } from "./features/coupons/couponThunks";
 import { fetchTransfers } from "./features/transfers/transferThunks";
-import { fetchActivityPages } from "./features/activityPages/activityPageThunks";
+
 import { fetchBusinessSettings } from "./features/businessSettings/businessSettingsThunks";
 import { fetchAdminStats } from "./features/admin/adminThunks";
+import { fetchCurrencies } from "./features/currency/currencyThunks";
 
 export default function StoreInitializer() {
   const dispatch = useAppDispatch();
@@ -21,13 +22,6 @@ export default function StoreInitializer() {
   useEffect(() => {
     dispatch(checkAuth());
     dispatch(fetchPackages());
-    dispatch(dispatch => fetchDestinations()); // fix potential thunk call if needed, but the original was dispatch(fetchDestinations())
-    // Actually the original code had:
-    // dispatch(checkAuth());
-    // dispatch(fetchPackages());
-    // dispatch(fetchDestinations());
-    // ...
-    // I will keep it as is but fix the imports.
     dispatch(fetchDestinations());
     dispatch(fetchTrending("India"));
     dispatch(fetchTrending("International"));
@@ -37,7 +31,8 @@ export default function StoreInitializer() {
     dispatch(fetchRegions());
     dispatch(fetchCoupons());
     dispatch(fetchTransfers());
-    dispatch(fetchActivityPages());
+    dispatch(fetchCurrencies());
+
     dispatch(fetchBusinessSettings());
     dispatch(fetchAdminStats());
   }, [dispatch]);

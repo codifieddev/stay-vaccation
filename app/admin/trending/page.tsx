@@ -9,6 +9,8 @@ type Category = "India" | "International";
 interface RowState {
   isTrending: boolean;
   category: Category;
+  displayOrder: number;
+  status: "Visible" | "Hidden" | "Draft" | "Unpublished";
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -22,11 +24,14 @@ export default function TrendingDestinationsAdminPage() {
 
   const [search,    setSearch]    = useState("");
   const [filterTab, setFilterTab] = useState<"All" | "Trending" | "India" | "International">("All");
+  const [hideEmpty,   setHideEmpty]   = useState(true);
 
   const [edits,   setEdits]   = useState<Record<string, RowState>>({});
   const [saving,  setSaving]  = useState<Record<string, boolean>>({});
   const [saved,   setSaved]   = useState<Record<string, boolean>>({});
   const [errors,  setErrors]  = useState<Record<string, string>>({});
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const rows = useMemo(() =>
     destinations.map((d) => ({
@@ -38,6 +43,8 @@ export default function TrendingDestinationsAdminPage() {
       isActive:     (d as any).isActive,
       isTrending: d.isTrending ?? false,
       category:   (d.category === "International" ? "International" : "India") as Category,
+      displayOrder: d.displayOrder ?? 0,
+      status: d.status || (d.isEnabled ? "Visible" : "Hidden"),
     })),
   [destinations]);
 
@@ -52,8 +59,10 @@ export default function TrendingDestinationsAdminPage() {
     setEdits((p) => ({
       ...p,
       [id]: {
-        isTrending: get(id, "isTrending", rows.find((r) => r._id === id)?.isTrending),
-        category:   get(id, "category",   rows.find((r) => r._id === id)?.category),
+        isTrending:   get(id, "isTrending",   rows.find((r) => r._id === id)?.isTrending),
+        category:     get(id, "category",     rows.find((r) => r._id === id)?.category),
+        displayOrder: get(id, "displayOrder", rows.find((r) => r._id === id)?.displayOrder),
+        status:       get(id, "status",       rows.find((r) => r._id === id)?.status),
         ...p[id],
         [field]: value,
       },
@@ -64,8 +73,10 @@ export default function TrendingDestinationsAdminPage() {
     const row = rows.find((r) => r._id === id);
     if (!row) return;
     const patch: RowState = {
-      isTrending: get(id, "isTrending", row.isTrending) as boolean,
-      category:   get(id, "category",   row.category)   as Category,
+      isTrending:   get(id, "isTrending",   row.isTrending)   as boolean,
+      category:     get(id, "category",     row.category)     as Category,
+      displayOrder: Number(get(id, "displayOrder", row.displayOrder)),
+      status:       get(id, "status",       row.status)       as any,
     };
 
     setSaving((p) => ({ ...p, [id]: true }));
@@ -91,6 +102,42 @@ export default function TrendingDestinationsAdminPage() {
     }
   };
 
+  const handleBulkAction = async (action: "mark-trending" | "remove-trending" | "set-visible" | "set-hidden") => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+
+    // We'll process them sequentially or in small batches
+    for (const id of ids) {
+      const row = rows.find(r => r._id === id);
+      if (!row) continue;
+
+      const patch: any = {};
+      if (action === "mark-trending")   patch.isTrending = true;
+      if (action === "remove-trending") patch.isTrending = false;
+      if (action === "set-visible")     patch.status = "Visible";
+      if (action === "set-hidden")      patch.status = "Hidden";
+
+      // We'll use the store directly for bulk
+      const dest = destinations.find(d => d._id === id);
+      if (dest) {
+        await dispatch(updateDestination({ ...dest, ...patch }));
+      }
+    }
+    setSelected(new Set());
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(f => f._id)));
+  };
+
   // ── Discard local edits for a row ──────────────────────────────────────────
   const handleDiscard = (id: string) => {
     setEdits((p)  => { const n = { ...p }; delete n[id]; return n; });
@@ -114,6 +161,11 @@ export default function TrendingDestinationsAdminPage() {
       filterTab === "India"         ? effectiveCategory === "India" :
       filterTab === "International" ? effectiveCategory === "International" : true;
     return matchSearch && matchTab;
+  }).sort((a, b) => {
+    const orderA = get(a._id, "displayOrder", a.displayOrder) as number;
+    const orderB = get(b._id, "displayOrder", b.displayOrder) as number;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.name.localeCompare(b.name);
   });
 
   return (
@@ -181,6 +233,16 @@ export default function TrendingDestinationsAdminPage() {
           ))}
         </div>
 
+        <label className="flex items-center gap-2 cursor-pointer ml-4">
+          <input 
+            type="checkbox" 
+            checked={hideEmpty} 
+            onChange={(e) => setHideEmpty(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-xs font-semibold text-gray-600">Hide 0-package destinations from homepage</span>
+        </label>
+
         <p className="text-xs text-gray-400 ml-auto">{filtered.length} / {rows.length}</p>
       </div>
 
@@ -189,11 +251,19 @@ export default function TrendingDestinationsAdminPage() {
 
         {/* Column headers */}
         <div className="grid items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider"
-          style={{ gridTemplateColumns: "44px 1fr 170px 220px 130px" }}>
+          style={{ gridTemplateColumns: "40px 44px 1fr 140px 80px 140px 180px 130px" }}>
+          <input 
+            type="checkbox" 
+            checked={selected.size > 0 && selected.size === filtered.length}
+            onChange={toggleAll}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
           <span />
           <span>Destination</span>
           <span>Category</span>
-          <span>Trending</span>
+          <span>Order</span>
+          <span>Status</span>
+          <span>Trending Action</span>
           <span className="text-right">Actions</span>
         </div>
 
@@ -225,8 +295,14 @@ export default function TrendingDestinationsAdminPage() {
                     hasError  ? "bg-red-50/30"   :
                     "hover:bg-gray-50/60"
                   }`}
-                  style={{ gridTemplateColumns: "44px 1fr 170px 220px 130px" }}
+                  style={{ gridTemplateColumns: "40px 44px 1fr 140px 80px 140px 180px 130px" }}
                 >
+                  <input 
+                    type="checkbox" 
+                    checked={selected.has(row._id)}
+                    onChange={() => toggleSelect(row._id)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
                   {/* Thumbnail */}
                   <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                     {row.image ? (
@@ -267,26 +343,47 @@ export default function TrendingDestinationsAdminPage() {
                     <option value="International">🌍 International</option>
                   </select>
 
-                  {/* Trending toggle */}
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <div
-                      role="switch"
-                      aria-checked={effTrending}
-                      onClick={() => !isSaving && setField(row._id, "isTrending", !effTrending)}
-                      className={`relative w-11 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${
-                        effTrending ? "bg-amber-500" : "bg-gray-200"
-                      } ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  {/* Display Order */}
+                  <input
+                    type="number"
+                    value={get(row._id, "displayOrder", row.displayOrder)}
+                    disabled={isSaving}
+                    onChange={(e) => setField(row._id, "displayOrder", parseInt(e.target.value) || 0)}
+                    className="w-full text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 text-center"
+                    placeholder="0"
+                  />
+
+                  {/* Status Dropdown */}
+                  <select
+                    value={get(row._id, "status", row.status)}
+                    disabled={isSaving}
+                    onChange={(e) => setField(row._id, "status", e.target.value)}
+                    className={`w-full text-[10px] font-bold border rounded-xl px-2 py-1.5 focus:outline-none transition-all ${
+                      get(row._id, "status", row.status) === "Visible" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                      get(row._id, "status", row.status) === "Hidden"  ? "bg-gray-50 text-gray-700 border-gray-100" :
+                      get(row._id, "status", row.status) === "Draft"   ? "bg-amber-50 text-amber-700 border-amber-100" :
+                      "bg-red-50 text-red-700 border-red-100"
+                    }`}
+                  >
+                    <option value="Visible">Visible</option>
+                    <option value="Hidden">Hidden</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Unpublished">Unpublished</option>
+                  </select>
+
+                  {/* Trending Toggle as Action Buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setField(row._id, "isTrending", !effTrending)}
+                      className={`flex-1 text-[10px] font-bold py-1.5 px-2 rounded-lg transition-all ${
+                        effTrending 
+                          ? "bg-amber-500 text-white hover:bg-amber-600" 
+                          : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                      }`}
                     >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-                        effTrending ? "left-6" : "left-1"
-                      }`} />
-                    </div>
-                    <span className={`text-xs font-semibold min-w-[80px] ${
-                      effTrending ? "text-amber-600" : "text-gray-400"
-                    }`}>
-                      {effTrending ? "🔥 Trending" : "Not trending"}
-                    </span>
-                  </label>
+                      {effTrending ? "Remove Trending" : "Mark Trending"}
+                    </button>
+                  </div>
 
                   {/* Action buttons */}
                   <div className="flex items-center justify-end gap-2">
@@ -334,6 +431,53 @@ export default function TrendingDestinationsAdminPage() {
       <p className="text-xs text-gray-400 text-center pb-2">
         Changes apply to the homepage trending section immediately after saving.
       </p>
+
+      {/* ── Bulk Actions Floating Bar ────────────────────────────── */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#1a3f4e] text-white px-6 py-4 rounded-2xl shadow-2xl z-50 flex items-center gap-6 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex flex-col">
+            <span className="text-sm font-bold">{selected.size} selected</span>
+            <span className="text-[10px] text-white/50 uppercase tracking-widest">Bulk Actions</span>
+          </div>
+          
+          <div className="h-8 w-px bg-white/10" />
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleBulkAction("mark-trending")}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-xl text-xs font-bold transition-all"
+            >
+              Mark Trending
+            </button>
+            <button
+              onClick={() => handleBulkAction("remove-trending")}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/10"
+            >
+              Remove Trending
+            </button>
+            <button
+              onClick={() => handleBulkAction("set-visible")}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl text-xs font-bold transition-all"
+            >
+              Make Visible
+            </button>
+            <button
+              onClick={() => handleBulkAction("set-hidden")}
+              className="px-4 py-2 bg-red-500/80 hover:bg-red-500 rounded-xl text-xs font-bold transition-all"
+            >
+              Hide
+            </button>
+          </div>
+
+          <button
+            onClick={() => setSelected(new Set())}
+            className="ml-2 p-2 hover:bg-white/10 rounded-lg transition-all"
+            title="Clear Selection"
+          >
+            <Ic.Close />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

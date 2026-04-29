@@ -4,6 +4,8 @@ import Navbar from "@/app/components/frontend/Navbar";
 import Footer from "@/app/components/frontend/Footer";
 import Link from "next/link";
 
+import { useCurrency } from "@/app/hooks/useCurrency";
+
 interface Activity {
   _id: string;
   title: string;
@@ -44,8 +46,6 @@ export default function ActivityClientPage({
     if (filter === "All") return initialActivities;
     return initialActivities.filter(a => a.activityType === filter);
   }, [filter, initialActivities]);
-
-  console.log(filteredActivities);
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -131,6 +131,8 @@ export default function ActivityClientPage({
 }
 
 function ActivityCard({ act, idx }: { act: Activity; idx: number }) {
+  const { convert, formatPrice } = useCurrency();
+
   return (
     <div
       className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col h-full animate-fadeUp"
@@ -189,10 +191,12 @@ function ActivityCard({ act, idx }: { act: Activity; idx: number }) {
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Starting from</p>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-display font-bold text-[#1a3f4e]">
-                ₹{act.discountPrice || act.price || "—"}
+                {formatPrice(act.discountPrice || act.price || 0)}
               </span>
               {act.discountPrice && act.price && (
-                <span className="text-xs text-gray-400 line-through">₹{act.price}</span>
+                <span className="text-xs text-gray-400 line-through">
+                  {formatPrice(act.price)}
+                </span>
               )}
             </div>
           </div>

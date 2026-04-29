@@ -34,6 +34,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
   const destinations = useAppSelector(state => state.destinations.destinations);
   const activityPages = useAppSelector(state => state.activityPages.activityPages);
   const categories = useAppSelector(state => state.categories.categories);
+  const currencies = useAppSelector(state => state.currency.currencies);
 
   const counts = {
     packages: packages.length,
@@ -45,6 +46,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
     destinations: destinations.length,
     activityPages: activityPages.length,
     categories: categories.length,
+    currencies: currencies.length,
   };
 
   const PAGE_META: Record<string, { title: string; subtitle: string }> = {
@@ -90,6 +92,10 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
     categories: {
       title: "Homepage Categories",
       subtitle: `${categories.length} categories on homepage`,
+    },
+    currencies: {
+      title: "Currency Settings",
+      subtitle: `${currencies.length} currencies configured`,
     },
     new: { title: "New Transfer Route", subtitle: "Add a new transfer route" },
   };

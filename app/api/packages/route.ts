@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 export async function POST(req: NextRequest) {
   try {
     const bodyRaw = await req.json();
+    console.log("[POST /api/packages] Incoming request body:", JSON.stringify(bodyRaw).slice(0, 500) + "...");
     // Always strip any client-provided id or _id — we generate a fresh one
     const { id: _clientId, _id: _clientMongoId, ...body } = bodyRaw;
 
@@ -244,6 +245,7 @@ const normalizedPackages = packages.map((pkg) => {
 export async function PUT(req: NextRequest) {
   try {
     const bodyRaw = await req.json();
+    console.log("[PUT /api/packages] Incoming request body:", JSON.stringify(bodyRaw).slice(0, 500) + "...");
     const { id, _id, ...body } = bodyRaw; // Extract unwanted fields
 
     if (!id || !ObjectId.isValid(id)) {

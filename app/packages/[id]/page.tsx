@@ -4,10 +4,7 @@ import Navbar from "../../components/frontend/Navbar";
 import Footer from "../../components/frontend/Footer";
 import Link from "next/link";
 import { useAppSelector } from "@/app/store/hooks";
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$", THB: "฿",
-};
+import { useCurrency } from "@/app/hooks/useCurrency";
 
 const DAY_COLORS: Record<string, string> = {
   arrival: "border-l-emerald-500 bg-emerald-50",
@@ -41,6 +38,8 @@ export default function SinglePackagePage() {
   const { packages, loading: reduxLoading } = useAppSelector(state => state.packages);
   const pkg = packages.find(p => p.id === matchedId || p._id === matchedId);
   const loading = reduxLoading && !pkg;
+  
+  const { formatPrice } = useCurrency();
 
   const [activeTab, setActiveTab] = useState("Overview");
   const [openDays, setOpenDays] = useState<Set<number>>(new Set([0]));
@@ -102,8 +101,7 @@ export default function SinglePackagePage() {
     );
   }
 
-  const sym = CURRENCY_SYMBOLS[pkg.price?.currency] || "₹";
-  const amount = typeof pkg.price?.amount === "number" ? pkg.price.amount.toLocaleString() : pkg.price?.amount;
+  const packagePrice = formatPrice(pkg.price?.amount, "INR");
   const days = pkg.tripDuration?.match(/^(\d+)/)?.[1] || "—";
   const nights = pkg.tripDuration?.match(/(\d+)\s*Night/i)?.[1] || String(Number(days) - 1);
 
@@ -171,7 +169,7 @@ export default function SinglePackagePage() {
                 <div className="bg-[#1a3f4e] px-6 py-5">
                   <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Starting from</p>
                   <div className="flex items-end gap-2">
-                    <span className="text-4xl font-bold text-white">{sym}{amount}</span>
+                    <span className="text-4xl font-bold text-white">{packagePrice}</span>
                     <span className="text-white/50 text-sm mb-1">/ person</span>
                   </div>
                   <div className="flex gap-3 mt-3 text-xs text-white/60">

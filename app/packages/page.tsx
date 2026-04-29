@@ -6,9 +6,6 @@ import Footer from "../components/frontend/Footer";
 import PackageCard from "../components/frontend/PackageCard";
 import { useAppSelector } from "@/app/store/hooks";
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$", THB: "฿",
-};
 
 const SORT_OPTIONS = [
   { value: "default", label: "Featured" },

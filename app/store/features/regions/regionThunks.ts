@@ -26,14 +26,14 @@ export const createRegion = createAsyncThunk("regions/createRegion", async (regi
 });
 
 export const updateRegion = createAsyncThunk("regions/updateRegion", async (region: Region) => {
-  return apiFetch<Region>(`/api/regions/${region._id}`, {
+  return apiFetch<Region>(`/api/regions`, {
     method: "PUT",
     body: JSON.stringify(region),
   });
 });
 
 export const deleteRegion = createAsyncThunk("regions/deleteRegion", async (id: string) => {
-  await apiFetch(`/api/regions/${id}`, {
+  await apiFetch(`/api/regions?id=${id}`, {
     method: "DELETE",
   });
   return id;

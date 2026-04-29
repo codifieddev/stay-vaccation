@@ -46,7 +46,7 @@ export default function DashboardContent() {
       if (createPackage.fulfilled.match(resultAction)) {
         const result = resultAction.payload as any;
         setIsDupeModalOpen(false);
-        router.push(`/admin/packages/edit/${result._id || result.id}`);
+        router.push(`/admin/packages/edit/${result.insertedId || result.id}`);
       } else {
         alert("Duplicate failed: " + (resultAction.error?.message || "Unknown error"));
       }

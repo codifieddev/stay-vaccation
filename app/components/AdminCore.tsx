@@ -21,6 +21,7 @@ import { fetchRegions, createRegion, updateRegion, deleteRegion } from "@/app/st
 import { setCategories } from "@/app/store/features/categories/categorySlice";
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "@/app/store/features/categories/categoryThunks";
 import { logout } from "@/app/store/features/auth/authThunks";
+import { apiFetch } from "@/app/store/apiUtils";
 
 // ══════════════════════════════════════════════════════════════════
 //   STAY VACATION — Admin Panel v6                                  
@@ -153,6 +154,8 @@ export interface Region {
   isActive?: boolean;
 }
 
+export type DestinationStatus = "Visible" | "Hidden" | "Draft" | "Unpublished";
+
 export interface Destination {
   _id: string;
   name: string;
@@ -165,6 +168,8 @@ export interface Destination {
   packageCount?: number;
   isTrending?: boolean;
   category?: "India" | "International";
+  displayOrder?: number;
+  status: DestinationStatus;
 }
 
 export interface Category {
@@ -972,36 +977,39 @@ export const ActivityPageAdmin = () => {
   const [editing, setEditing] = useState<ActivityPage | null>(null);
 
   const fetchPages = async () => {
-    const res = await fetch("/api/activity-pages");
-    const d = await res.json();
-    if (d.success) dispatch(setActivityPages(d.data));
+    try {
+      const data = await apiFetch<ActivityPage[]>("/api/activity-pages");
+      dispatch(setActivityPages(data));
+    } catch (e) {
+      console.error("Failed to fetch activity pages", e);
+    }
   };
 
   const onSave = async (data: ActivityPage) => {
     const isEdit = !!data._id;
     const url = isEdit ? `/api/activity-pages/${data.slug}` : "/api/activity-pages";
-    const res = await fetch(url, {
-      method: isEdit ? "PUT" : "POST",
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if (result.success) {
-      alert(result.message);
+    try {
+      const result = await apiFetch<any>(url, {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify(data)
+      });
+      alert(result.message || "Saved successfully");
       fetchPages();
       setModalOpen(false);
       setEditing(null);
-    } else {
-      alert("Error: " + result.message);
+    } catch (e: any) {
+      alert("Error: " + e.message);
     }
   };
 
   const onDelete = async (slug: string) => {
     if (!confirm("Delete this page?")) return;
-    const res = await fetch(`/api/activity-pages/${slug}`, { method: "DELETE" });
-    const result = await res.json();
-    if (result.success) {
-      alert(result.message);
+    try {
+      const result = await apiFetch<any>(`/api/activity-pages/${slug}`, { method: "DELETE" });
+      alert(result.message || "Deleted successfully");
       fetchPages();
+    } catch (e: any) {
+      alert("Delete failed: " + e.message);
     }
   };
 
@@ -2664,37 +2672,42 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
             {itinerary.length > 0 && <p className="text-xs text-emerald-600 mt-1 font-medium flex items-center gap-1"><Ic.Check />{itinerary.length} days auto-generated</p>}
           </div>
 
-          {/* ── Price + Currency ── */}
+          {/* ── Price (Base: INR) ── */}
           <div className="col-span-2">
-            <FL required>Price per Person</FL>
+            <FL required>Base Price (in INR — Source of Truth)</FL>
             <div className="flex gap-3">
-              {/* Currency dropdown */}
-              <div className="w-56 flex-shrink-0">
-                <select
-                  value={form.price?.currency || "INR"}
-                  onChange={e => updPx("currency", e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all cursor-pointer">
-                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-                </select>
-              </div>
-              {/* Amount input with symbol prefix */}
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold select-none">{getCurrSym(form.price?.currency || "INR")}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold select-none">₹</span>
                 <Inp
                   type="number"
-                  placeholder="0.00"
+                  placeholder="e.g. 45000"
                   value={form.price?.amount || ""}
-                  onChange={e => updPx("amount", e.target.value)}
+                  onChange={e => {
+                    setForm(p => ({
+                      ...p,
+                      price: { ...p.price, amount: e.target.value, currency: "INR" }
+                    }));
+                  }}
                   className="pl-8"
                 />
               </div>
+              <div className="w-1/3">
+                <FL>Discounted Price (Optional)</FL>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold select-none">₹</span>
+                  <Inp
+                    type="number"
+                    placeholder="Original price"
+                    value={form.price?.originalAmount || ""}
+                    onChange={e => updPx("originalAmount", e.target.value)}
+                    className="pl-8 text-gray-500"
+                  />
+                </div>
+              </div>
             </div>
-            {form.price?.amount && Number(form.price.amount) > 0 && (
-              <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
-                <Ic.Check />
-                Display: <strong className="ml-1 text-blue-900">{getCurrSym(form.price?.currency || "INR")}{Number(form.price.amount).toLocaleString("en-IN")} {form.price?.currency}</strong>
-              </p>
-            )}
+            <p className="text-[10px] text-gray-400 mt-1.5 italic">
+              * Enter all prices in Indian Rupees (INR). The system will automatically convert this to other currencies for international travellers.
+            </p>
           </div>
 
           <div><FL>Travel Style</FL><Sel options={OPTIONS.travelStyle} placeholder="Select…" value={form.travelStyle || ""} onChange={e => upd("travelStyle", e.target.value)} /></div>
@@ -2790,8 +2803,8 @@ export const ViewPackage = ({ pkg, onEdit }: any) => {
           <div className="text-right flex-shrink-0">
             {pkg.price?.amount && Number(pkg.price.amount) > 0 ? (
               <>
-                <p className="text-3xl font-bold">{sym}{Number(pkg.price.amount).toLocaleString("en-IN")}</p>
-                <p className="text-xs text-blue-400 mt-1">{pkg.price?.currency} / person</p>
+                <p className="text-3xl font-bold">₹{Number(pkg.price.amount).toLocaleString("en-IN")}</p>
+                <p className="text-xs text-blue-400 mt-1">Base Price (INR) / person</p>
               </>
             ) : (
               <p className="text-sm text-blue-400">Price not set</p>
@@ -3567,22 +3580,15 @@ const BookingFormModal = ({ pkg, onClose }: { pkg: Package; onClose: () => void 
         createdAt: new Date().toISOString()
       };
 
-      const res = await fetch("/api/bookings", {
+      const result = await apiFetch<any>("/api/bookings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-
-      const result = await res.json();
-      if (result.success) {
-        alert("Booking created successfully!");
-        onClose();
-      } else {
-        alert("Failed to create booking.");
-      }
-    } catch (err) {
+      alert(result.message || "Booking created successfully!");
+      onClose();
+    } catch (err: any) {
       console.error(err);
-      alert("Network error while booking.");
+      alert("Booking failed: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -3752,11 +3758,12 @@ export const Sidebar = ({ page, setPage, counts }) => {
     { key: "locations", label: "Locations", icon: <Ic.Globe />, group: "main" },
     { key: "categories", label: "Categories", icon: <Ic.Tag />, group: "main" },
     { key: "trending", label: "Trending Destinations", icon: <Ic.Flame />, group: "main" },
+    { key: "currencies", label: "Currencies", icon: <Ic.Sync />, group: "main", badge: counts.currencies },
     { key: "business-settings", label: "Business Settings", icon: <Ic.Star />, group: "main" },
     { key: "master-activities", label: "Activities", icon: <Ic.Activity />, group: "master", badge: counts.activities },
     { key: "master-hotels", label: "Hotels", icon: <Ic.Hotel />, group: "master", badge: counts.hotels },
   ];
-  const isActive = (key) => key === "dashboard" ? page === "dashboard" : key === "packages" ? ["packages", "create", "edit", "view"].includes(page) : page === key;
+  const isActive = (key) => key === "dashboard" ? page === "dashboard" : (key === "packages" ? ["packages", "create", "edit", "view"].includes(page) : page === key);
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-blue-950 text-white flex flex-col z-30 shadow-xl">
       <div className="px-5 py-5 border-b border-white/10">
@@ -3825,16 +3832,11 @@ export const AdminStateProvider = ({ children }: { children: React.ReactNode }) 
   const handleSeed = async () => {
     if (!confirm("Are you sure? This will safely inject demo data. Existing user data will be kept intact.")) return;
     try {
-      const res = await fetch("/api/seed", { method: "POST" });
-      const result = await res.json();
-      if (result.success) {
-        alert("Seed successful! Page will reload.");
-        window.location.reload();
-      } else {
-        alert("Seed failed: " + result.message);
-      }
-    } catch (e) {
-      alert("Network error during seed.");
+      const result = await apiFetch<any>("/api/seed", { method: "POST" });
+      alert(result.message || "Seed successful! Page will reload.");
+      window.location.reload();
+    } catch (e: any) {
+      alert("Seed failed: " + e.message);
     }
   };
 
@@ -3955,6 +3957,64 @@ export const CategoryForm = ({ initial, onSave, onCancel }: { initial: Category;
         <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
         <Btn variant="success" onClick={() => onSave(data)}>Save Category</Btn>
       </div>
+    </div>
+  );
+};
+
+export const CurrencyForm = ({ initial, onSave, onCancel }: { initial: any; onSave: (d: any) => void; onCancel: () => void }) => {
+  const [data, setData] = useState(initial || { code: "", name: "", symbol: "", flag: "", exchangeRate: 1, isDefault: false, isEnabled: true });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!data.code || !data.name || !data.symbol) return alert("Please fill in all required fields.");
+    onSave(data);
+  };
+
+  return (
+    <div className="bg-white p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
+        <div className="col-span-2 md:col-span-1">
+          <FL required>Currency Code</FL>
+          <Inp value={data.code} onChange={e => setData({ ...data, code: e.target.value.toUpperCase() })} placeholder="e.g. USD" maxLength={3} />
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <FL required>Currency Name</FL>
+          <Inp value={data.name} onChange={e => setData({ ...data, name: e.target.value })} placeholder="e.g. US Dollar" />
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <FL required>Symbol</FL>
+          <Inp value={data.symbol} onChange={e => setData({ ...data, symbol: e.target.value })} placeholder="e.g. $" />
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <FL>Flag Emoji</FL>
+          <Inp value={data.flag} onChange={e => setData({ ...data, flag: e.target.value })} placeholder="e.g. 🇺🇸" />
+        </div>
+        <div className="col-span-2 md:col-span-1">
+          <FL required>Exchange Rate (Relative to INR)</FL>
+          <Inp type="number" step="0.000001" value={data.exchangeRate} onChange={e => setData({ ...data, exchangeRate: Number(e.target.value) })} />
+          <p className="text-[10px] text-gray-500 mt-1">Example: If 1 INR = 0.012 USD, enter 0.012</p>
+        </div>
+        <div className="col-span-2 flex flex-col gap-4">
+          <label className="flex items-center gap-3 cursor-pointer group p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-blue-200 transition-all">
+            <input type="checkbox" className="w-5 h-5 rounded accent-blue-600" checked={data.isDefault} onChange={e => setData({ ...data, isDefault: e.target.checked })} />
+            <div>
+              <p className="text-sm font-bold text-gray-900">Set as Default</p>
+              <p className="text-xs text-gray-400">This currency will be the default for all users</p>
+            </div>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer group p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-blue-200 transition-all">
+            <input type="checkbox" className="w-5 h-5 rounded accent-blue-600" checked={data.isEnabled} onChange={e => setData({ ...data, isEnabled: e.target.checked })} />
+            <div>
+              <p className="text-sm font-bold text-gray-900">Enabled</p>
+              <p className="text-xs text-gray-400">Toggle visibility on the frontend</p>
+            </div>
+          </label>
+        </div>
+        <div className="col-span-2 border-t border-gray-100 pt-6 flex justify-end gap-3">
+          <Btn variant="outline" type="button" onClick={onCancel}>Cancel</Btn>
+          <Btn variant="success" type="submit">Save Currency</Btn>
+        </div>
+      </form>
     </div>
   );
 };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useCurrency } from "@/app/hooks/useCurrency";
 
 interface Package {
   id: string;
@@ -27,18 +28,17 @@ interface Package {
   images?: string[];
 }
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$", THB: "฿",
-};
-
 export default function PackageCard({ pkg, index = 0 }: { pkg: Package; index?: number }) {
-  const sym = CURRENCY_SYMBOLS[pkg.price?.currency] || pkg.price?.currency || "₹";
-  
-  // Format Price
-  const amount = Number(pkg.price?.amount) || 0;
-  const originalAmount = Number(pkg.price?.originalAmount) || 0;
-  const hasDiscount = originalAmount > amount;
-  const discountPercent = hasDiscount ? Math.round(((originalAmount - amount) / originalAmount) * 100) : 0;
+  const { convert, formatPrice } = useCurrency();
+  const baseAmount = Number(pkg.price?.amount) || 0;
+  const baseOriginalAmount = Number(pkg.price?.originalAmount) || 0;
+
+  const currentPrice = convert(baseAmount, "INR");
+  const originalPrice = convert(baseOriginalAmount, "INR");
+
+  const amount = currentPrice.amount;
+  const hasDiscount = originalPrice.amount > amount;
+  const discountPercent = hasDiscount ? Math.round(((originalPrice.amount - amount) / originalPrice.amount) * 100) : 0;
 
   // Format Duration
   const daysMatch = pkg.tripDuration?.match(/(\d+)\s*Days?/i);
@@ -137,11 +137,13 @@ export default function PackageCard({ pkg, index = 0 }: { pkg: Package; index?: 
           <div className="shrink-0">
             {hasDiscount && (
               <p className="text-xs text-gray-400 line-through mb-0.5">
-                {sym}{Number(originalAmount).toLocaleString()}
+                {formatPrice(baseOriginalAmount, "INR")}
               </p>
             )}
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-[#1a3f4e] tracking-tight">{sym}{amount.toLocaleString()}</span>
+              <span className="text-2xl font-black text-[#1a3f4e] tracking-tight">
+                {formatPrice(baseAmount, "INR")}
+              </span>
               <span className="text-[10px] text-gray-400 font-bold uppercase">/ Person</span>
             </div>
           </div>

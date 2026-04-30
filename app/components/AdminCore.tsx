@@ -149,7 +149,9 @@ export interface Category {
   description?: string;
   icon?: string;
   isActive: boolean;
-  color?: string; // keeping for UI
+  color?: string; // keeping for UI gradient
+  gradient?: string; // explicitly naming for fallback
+  image?: string;    // [NEW]
   link?: string;  // keeping for UI
   order?: number; // keeping for UI
   shortLocationList?: string;
@@ -328,7 +330,7 @@ const emptyKBYG = (): KBYG => ({ id: uid(), point: "" });
 const emptyAdditionalInfo = () => ({ aboutDestination: "", quickInfo: { destinationsCovered: "", duration: "", startPoint: "", endPoint: "" }, experiencesCovered: [], notToMiss: [] });
 const makeDay = (n: number): ItineraryDay => ({ id: uid(), dayNumber: n, title: n === 1 ? "Arrival Day" : `Day ${n}`, city: "", dayType: n === 1 ? "arrival" : "sightseeing", mealsIncluded: [], notes: "", description: "", hotelStays: [], transfers: [], activities: [] });
 
-const emptyCategory = (): Category => ({ name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", link: "", order: 0, description: "", shortLocationList: "", isActive: true });
+const emptyCategory = (): Category => ({ name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", gradient: "from-cyan-400 to-blue-500", image: "", link: "", order: 0, description: "", shortLocationList: "", isActive: true });
 
 // ─── RESOLVE HELPERS (two-way sync merge) ─────────────────────────
 const resolveActivity = (dayAct: DayActivity, masters: MasterActivity[]) => {
@@ -3661,7 +3663,23 @@ export const CategoryForm = ({ initial, onSave, onCancel }: { initial: Category;
   const [data, setData] = useState<Category>(initial || emptyCategory());
   return (
     <div className="bg-white p-6 space-y-6">
-      <div className="grid grid-cols-2 gap-6">
+       <div className="grid grid-cols-2 gap-6">
+        {/* ─── Image Priority ─── */}
+        <div className="col-span-2 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+          <FL required>Category Hero Image</FL>
+          <div className="space-y-3 mt-2">
+            <div className="flex gap-2">
+               <Inp className="bg-white" value={data.image || ""} onChange={e => setData({ ...data, image: e.target.value })} placeholder="Enter image URL or upload below..." />
+            </div>
+            <ImageUploader 
+              images={data.image ? [data.image] : []} 
+              onAdd={url => setData({ ...data, image: url })} 
+              onRemove={() => setData({ ...data, image: "" })} 
+            />
+            <p className="text-[10px] text-blue-400 italic flex items-center gap-1"><Ic.Info /> Recommended: 1200x600px. This image will represent this category across the site.</p>
+          </div>
+        </div>
+
         <div className="col-span-2 md:col-span-1">
           <FL required>Category Name</FL>
           <Inp value={data.name} onChange={e => {
@@ -3695,12 +3713,18 @@ export const CategoryForm = ({ initial, onSave, onCancel }: { initial: Category;
             </div>
           </label>
         </div>
+
+        {/* ─── De-prioritized Visual Settings ─── */}
         <div className="col-span-2 border-t border-gray-100 pt-6">
-          <p className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">Visual Settings (Frontend)</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Fallback Styling</p>
+            <span className="text-[10px] text-gray-300 font-medium bg-gray-50 px-2 py-0.5 rounded">Secondary Settings</span>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <FL>Gradient Color</FL>
-              <Inp value={data.color} onChange={e => setData({ ...data, color: e.target.value })} placeholder="from-cyan-400 to-blue-500" />
+              <FL>Gradient Fallback</FL>
+              <Inp value={data.color} onChange={e => setData({ ...data, color: e.target.value, gradient: e.target.value })} placeholder="from-cyan-400 to-blue-500" />
+              <p className="text-[10px] text-gray-400 mt-1">Used if Hero Image is not provided.</p>
             </div>
             <div>
               <FL>Target Link (Override)</FL>
@@ -3709,9 +3733,13 @@ export const CategoryForm = ({ initial, onSave, onCancel }: { initial: Category;
           </div>
         </div>
       </div>
-      <div className="pt-6 border-t border-gray-100 flex justify-end gap-3">
-        <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
-        <Btn variant="success" onClick={() => onSave(data)}>Save Category</Btn>
+      <div className="sticky bottom-0 bg-white pt-6 pb-2 border-t border-gray-100 flex items-center justify-end gap-3 mt-8 z-20">
+        <Btn variant="secondary" onClick={onCancel}>
+          Cancel
+        </Btn>
+        <Btn variant="primary" onClick={() => onSave(data)} className="px-8 shadow-lg shadow-blue-600/20">
+          Save Changes
+        </Btn>
       </div>
     </div>
   );

@@ -71,24 +71,46 @@ export default async function CategoriesPage() {
               <Link
                 key={cat._id}
                 href={`/categories/${cat.slug}`}
-                className="group rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full"
+                className="group rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full relative"
               >
-                {/* Top gradient banner */}
-                <div className={`h-32 bg-gradient-to-r ${cat.color || 'from-blue-600 to-indigo-700'} flex items-center justify-between px-8 relative overflow-hidden`}>
-                   {/* Background pattern/overlay */}
-                  <div className="absolute inset-0 opacity-10 pointer-events-none">
-                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                      <path d="M0 100 L100 0 L100 100 Z" fill="white" />
-                    </svg>
-                  </div>
+                {/* Background image or gradient fallback */}
+                {cat.image ? (
+                  <>
+                    <img 
+                      src={cat.image} 
+                      alt={cat.name} 
+                      className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-110" 
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    {/* Sophisticated dark gradient overlay for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent group-hover:from-black/90 transition-colors" />
+                  </>
+                ) : (
+                  <>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.color || cat.gradient || 'from-blue-600 to-indigo-700'} opacity-90`} />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                  </>
+                )}
 
-                  <div className="relative z-10">
-                    <h2 className="text-white font-bold text-xl drop-shadow-sm">{cat.name}</h2>
-                    <p className="text-white/80 text-xs mt-1 font-medium tracking-wide">
+                {/* Top content overlay */}
+                <div className="h-32 flex items-center justify-between px-8 relative z-10 overflow-hidden">
+                   {/* Background pattern overlay (subtle) */}
+                  {!cat.image && (
+                    <div className="absolute inset-0 opacity-10 pointer-events-none">
+                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path d="M0 100 L100 0 L100 100 Z" fill="white" />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <h2 className="text-white font-bold text-xl drop-shadow-md">{cat.name}</h2>
+                    <p className="text-white/90 text-xs mt-1 font-semibold tracking-wide drop-shadow-sm">
                       {cat.packageCount} {cat.packageCount === 1 ? 'Package' : 'Packages'} Available
                     </p>
                   </div>
-                  <div className="text-5xl drop-shadow-lg group-hover:scale-110 transition-transform duration-500 relative z-10">
+                  <div className="text-5xl drop-shadow-2xl group-hover:scale-110 transition-transform duration-500 relative">
                     {cat.icon}
                   </div>
                 </div>

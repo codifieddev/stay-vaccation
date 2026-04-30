@@ -47,9 +47,12 @@ export default function CategoriesPage() {
       </div>
 
       {(editing || isCreating) && (
-        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-hidden">
+          {/* Lock body scroll */}
+          <style jsx global>{`body { overflow: hidden !important; }`}</style>
+          
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
               <h3 className="font-bold text-gray-900 text-lg">
                 {isCreating ? "Create New Category" : "Edit Category"}
               </h3>
@@ -57,11 +60,14 @@ export default function CategoriesPage() {
                 <Ic.Close />
               </button>
             </div>
-            <CategoryForm 
-              initial={editing || { name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", link: "", order: 0, description: "", isActive: true }} 
-              onSave={handleSave} 
-              onCancel={() => { setEditing(null); setIsCreating(false); }} 
-            />
+            
+            <div className="flex-1 overflow-y-auto">
+              <CategoryForm 
+                initial={editing || { name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", gradient: "from-cyan-400 to-blue-500", image: "", link: "", order: 0, description: "", isActive: true }} 
+                onSave={handleSave} 
+                onCancel={() => { setEditing(null); setIsCreating(false); }} 
+              />
+            </div>
           </div>
         </div>
       )}
@@ -69,11 +75,17 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {[...categories].sort((a, b) => a.order - b.order).map((cat) => (
           <Card key={cat._id} className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300">
-            <div className={cls("h-24 bg-gradient-to-br flex items-center justify-center text-white relative", cat.color)}>
-              <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-              <div className="relative z-10 scale-110 group-hover:scale-125 transition-transform duration-500 opacity-90">
-                {/* Fallback icon if icon name doesn't match an Ic component */}
-                <Ic.Tag />
+            <div className={cls("h-24 bg-gradient-to-br flex items-center justify-center text-white relative", !cat.image && (cat.color || cat.gradient))}>
+              {cat.image ? (
+                <>
+                  <img src={cat.image} alt={cat.name} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+              )}
+              <div className="relative z-10 scale-110 group-hover:scale-125 transition-transform duration-500 opacity-90 text-4xl">
+                {cat.icon || <Ic.Tag />}
               </div>
               <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
                 <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white">

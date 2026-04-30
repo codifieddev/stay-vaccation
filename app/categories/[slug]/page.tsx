@@ -52,10 +52,28 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <Navbar />
       
       {/* Category Hero */}
-      <section className={`pt-32 pb-20 relative overflow-hidden bg-gradient-to-br ${category.color || 'from-blue-900 to-indigo-950'}`}>
-        {/* Abstract shapes for premium feel */}
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-white/5 skew-x-12 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-black/10 -skew-x-12 -translate-x-1/2" />
+      <section className="pt-32 pb-24 relative overflow-hidden min-h-[400px] flex items-center">
+        {/* Background Layer */}
+        <div className="absolute inset-0 z-0">
+          {category.image ? (
+            <>
+              <img 
+                src={category.image} 
+                alt={category.name} 
+                className="w-full h-full object-cover object-center"
+                decoding="async"
+              />
+              {/* Rich dark gradient for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+            </>
+          ) : (
+            <div className={`w-full h-full bg-gradient-to-br ${category.color || category.gradient || 'from-blue-900 to-indigo-950'} opacity-90`} />
+          )}
+          
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-white/5 skew-x-12 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-black/10 -skew-x-12 -translate-x-1/2" />
+        </div>
         
         <div className="container-sv relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">

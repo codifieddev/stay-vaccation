@@ -252,7 +252,13 @@ export default function TrendingDestinations() {
         {/* ── CTA ───────────────────────────────────────────────── */}
         <div className="text-center mt-8">
           <button
-            onClick={() => router.push(`/destinations?type=${activeTab}`)}
+            onClick={() => {
+              if (activeTab === "India") {
+                router.push("/destinations/india");
+              } else {
+                router.push("/destinations/international");
+              }
+            }}
             className="inline-flex items-center gap-3 text-[#1a3f4e] font-bold hover:gap-5 transition-all group cursor-pointer"
           >
             <span className="border-b-2 border-[#2fa3f2]/30 group-hover:border-[#2fa3f2] pb-1">

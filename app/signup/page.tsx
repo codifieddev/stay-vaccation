@@ -303,7 +303,7 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div className="min-h-screen bg-[#1a3f4e]" />}>
       <SignupForm />
     </Suspense>
   );

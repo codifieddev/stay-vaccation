@@ -52,6 +52,8 @@ export interface Category {
   slug: string;
   description?: string;
   icon?: string;
+  image?: string;
+  gradient?: string;
 }
 
 // ─── Theme styles mapping ─────────────────────────────────────────────────────
@@ -76,7 +78,37 @@ interface TabOption {
   emoji: string;
 }
 
-function getTabConfig(regions: Region[]): TabOption[] {
+function getTabConfig(regions: Region[], destinations: Destination[], override?: string): TabOption[] {
+  // If on a specific category page (like India), show sub-regions instead of global India/Intl
+  if (override === "india") {
+    const indiaRegions = regions.filter(r => 
+      destinations.some(d => d.regionId === r._id && d.category === "India") &&
+      r.name.toLowerCase() !== "around"
+    );
+    return [
+      { key: "All", label: "All India", emoji: "🇮🇳" },
+      ...indiaRegions.map(r => ({
+        key: r._id,
+        label: r.name,
+        emoji: r.icon || "📍",
+      })),
+    ];
+  }
+
+  if (override === "international") {
+    const intlRegions = regions.filter(r => 
+      destinations.some(d => d.regionId === r._id && d.category === "International")
+    );
+    return [
+      { key: "All", label: "All International", emoji: "✈️" },
+      ...intlRegions.map(r => ({
+        key: r._id,
+        label: r.name,
+        emoji: r.icon || "📍",
+      })),
+    ];
+  }
+
   const fixed: TabOption[] = [
     { key: "All", label: "All Destinations", emoji: "🌎" },
     { key: "India", label: "India", emoji: "🇮🇳" },
@@ -115,7 +147,7 @@ export default function DestinationsPageContent({
     else if (type === "international") setActiveTab("International");
   }, [searchParams, initialTypeOverride]);
 
-  const tabs = useMemo(() => getTabConfig(regions), [regions]);
+  const tabs = useMemo(() => getTabConfig(regions, destinations, initialTypeOverride), [regions, destinations, initialTypeOverride]);
 
   // Trending destinations (isTrending === true) - Filtered by tab if India/International selected
   const trendingDestinations = useMemo(() => {
@@ -127,6 +159,13 @@ export default function DestinationsPageContent({
 
   const filtered = useMemo(() => {
     let list = destinations;
+
+    // Apply Global Category Override (Force filter by India or International if on that page)
+    if (initialTypeOverride === "india") {
+      list = list.filter(d => d.category === "India");
+    } else if (initialTypeOverride === "international") {
+      list = list.filter(d => d.category === "International");
+    }
     
     // Support ?trending=true query param for strict trending view
     const showOnlyTrending = searchParams.get("trending") === "true";
@@ -164,6 +203,7 @@ export default function DestinationsPageContent({
       <Navbar />
 
       <HeroSection 
+        type={(initialTypeOverride as any) || "all"}
         totalCount={destinations.length}
         indiaCount={indiaCnt}
         intlCount={intlCnt}
@@ -195,12 +235,33 @@ export default function DestinationsPageContent({
                   <Link
                     key={cat._id}
                     href={`/packages?categoryId=${cat._id}`}
-                    className="group relative overflow-hidden rounded-[2rem] cursor-pointer h-full flex flex-col"
+                    className="group relative overflow-hidden rounded-[2rem] cursor-pointer h-full flex flex-col min-h-[200px] md:min-h-[240px]"
                     style={{ animationDelay: `${i * 60}ms` }}
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${style.gradient} opacity-90 group-hover:opacity-100 transition-opacity duration-500`} />
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-                    <div className={`absolute -bottom-8 -right-8 w-36 h-36 rounded-full bg-white/10 group-hover:scale-125 transition-transform duration-700`} />
+                    {/* Background image or gradient fallback */}
+                    <div className="absolute inset-0 z-0">
+                      {cat.image ? (
+                        <>
+                          <img 
+                            src={cat.image} 
+                            alt={cat.name} 
+                            className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-110" 
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          {/* Sophisticated dark gradient for readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:from-black/95 transition-colors" />
+                        </>
+                      ) : (
+                        <>
+                          <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradient || style.gradient} opacity-90 group-hover:opacity-100 transition-opacity duration-500`} />
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                        </>
+                      )}
+                    </div>
+
+                    <div className="absolute inset-0 opacity-[0.03] z-0" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+                    <div className={`absolute -bottom-8 -right-8 w-36 h-36 rounded-full bg-white/10 group-hover:scale-125 transition-transform duration-700 z-0`} />
                     <div className="relative z-10 p-6 md:p-8 flex flex-col h-full min-h-[200px] md:min-h-[240px]">
                       <div className={`w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-2xl mb-auto group-hover:scale-110 group-hover:bg-white/25 transition-all duration-300 shadow-lg border border-white/20`}>
                         {cat.icon || style.icon}

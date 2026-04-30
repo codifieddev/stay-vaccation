@@ -177,9 +177,28 @@ export default async function HomePage() {
                 className="group relative rounded-2xl overflow-hidden h-32 flex items-end p-4 card-hover shadow-lg shadow-blue-900/5 hover:shadow-blue-900/10"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-90`} />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                <div className="absolute top-4 right-4 text-3xl group-hover:scale-110 transition-transform">{cat.icon}</div>
+                {/* Background image or gradient fallback */}
+                <div className="absolute inset-0 z-0">
+                  {cat.image ? (
+                    <>
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-110" 
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      {/* Rich gradient overlay for readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:from-black transition-colors" />
+                    </>
+                  ) : (
+                    <>
+                      <div className={`absolute inset-0 bg-gradient-to-br ${cat.color || cat.gradient || 'from-blue-600 to-indigo-700'} opacity-90`} />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                    </>
+                  )}
+                </div>
+                <div className="absolute top-4 right-4 text-3xl group-hover:scale-110 transition-transform z-10">{cat.icon}</div>
                 <div className="relative z-10">
                   <span className="block text-white text-sm font-bold leading-tight">{cat.name}</span>
                   <span className="block text-white/60 text-[10px] font-bold uppercase tracking-tighter mt-1">

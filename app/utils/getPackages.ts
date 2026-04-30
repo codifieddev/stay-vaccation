@@ -4,32 +4,49 @@ import { getDatabase } from "./getDatabase";
  * Fetches the top N packages sorted by price (ascending = best value / best sellers).
  * Only pulls lightweight fields needed for the card: title, images, price, duration, slug.
  */
-export async function getBestSellingPackages(limit = 8) {
+export async function getBestSellingPackages(limit = 8, category?: string) {
   try {
     const db = await getDatabase();
 
-    const packages = await db
-      .collection("packages")
-      .find(
-        { "price.amount": { $exists: true, $gt: 0 } },
+    const pipeline: any[] = [
+      { $match: { "price.amount": { $exists: true, $gt: 0 } } },
+    ];
+
+    if (category) {
+      pipeline.push(
         {
-          projection: {
-            _id: 1,
-            id: 1,
-            title: 1,
-            images: 1,
-            price: 1,
-            tripDuration: 1,
-            destination: 1,
-            destinationSlug: 1,
-            travelStyle: 1,
-            shortDescription: 1,
+          $lookup: {
+            from: "destinations",
+            localField: "destinationSlug",
+            foreignField: "slug",
+            as: "destinationInfo",
           },
-        }
-      )
-      .sort({ "price.amount": 1 })   // lowest price first = best value / best selling
-      .limit(limit)
-      .toArray();
+        },
+        { $unwind: "$destinationInfo" },
+        { $match: { "destinationInfo.category": category } }
+      );
+    }
+
+    pipeline.push(
+      { $sort: { "price.amount": 1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          id: 1,
+          title: 1,
+          images: 1,
+          price: 1,
+          tripDuration: 1,
+          destination: 1,
+          destinationSlug: 1,
+          travelStyle: 1,
+          shortDescription: 1,
+        },
+      }
+    );
+
+    const packages = await db.collection("packages").aggregate(pipeline).toArray();
 
     return packages.map((p: any) => ({
       id: p._id.toString(),

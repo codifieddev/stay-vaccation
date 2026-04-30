@@ -6,7 +6,7 @@ const FOOTER_LINKS = {
   Explore: [
     { href: "/packages", label: "All Packages" },
     { href: "/categories", label: "Categories" },
-    { href: "/locations", label: "Locations" },
+    { href: "/destinations", label: "Locations" },
   ],
   Company: [
     { href: "/about", label: "About Us" },

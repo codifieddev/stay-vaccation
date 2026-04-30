@@ -32,7 +32,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
   const coupons = useAppSelector(state => state.coupons.coupons);
   const transfers = useAppSelector(state => state.transfers.transfers);
   const destinations = useAppSelector(state => state.destinations.destinations);
-  const activityPages = useAppSelector(state => state.activityPages.activityPages);
+
   const categories = useAppSelector(state => state.categories.categories);
   const currencies = useAppSelector(state => state.currency.currencies);
 
@@ -44,7 +44,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
     bookings: 0,
     transfers: transfers.length,
     destinations: destinations.length,
-    activityPages: activityPages.length,
+
     categories: categories.length,
     currencies: currencies.length,
   };
@@ -69,10 +69,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
       title: "Transfer Management",
       subtitle: `${transfers.length} active transfer routes`,
     },
-    "activity-pages": {
-      title: "Activity Landing Pages",
-      subtitle: `${activityPages.length} pages managed`,
-    },
+
     "page-cms": {
       title: "Page CMS",
       subtitle: "Manage content for dynamic web pages",

@@ -58,9 +58,37 @@ interface Package {
   itinerary?: any[];
 }
 
+import { getAllDestinationsWithRegions, getAllCategories } from "@/app/utils/getDestinations";
+import { getBestSellingPackages } from "@/app/utils/getPackages";
+import DestinationsPageContent from "../DestinationsPageContent";
+import { Suspense } from "react";
+
 export default async function DestinationPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const db = await getDatabase();
+
+  // ─── Special Case: Clean URLs for Categories (India / International) ───
+  if (slug.toLowerCase() === "india" || slug.toLowerCase() === "international") {
+    const [{ destinations, regions }, bestSellers, categories] = await Promise.all([
+      getAllDestinationsWithRegions(),
+      getBestSellingPackages(8),
+      getAllCategories(),
+    ]);
+
+    // We pass the type via query-like prop or just let the component handle the slug if we update it
+    // But for now, we can just wrap in Suspense and let it render
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <DestinationsPageContent
+          destinations={destinations}
+          regions={regions}
+          bestSellers={bestSellers}
+          categories={categories}
+          initialTypeOverride={slug.toLowerCase()}
+        />
+      </Suspense>
+    );
+  }
 
   // 1. Fetch Destination details
   let destination = await db.collection("destinations").findOne({ slug }) as unknown as Destination | null;

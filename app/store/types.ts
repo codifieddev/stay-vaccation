@@ -7,7 +7,7 @@ export * from "./features/categories/types";
 export * from "./features/regions/types";
 export * from "./features/coupons/types";
 export * from "./features/transfers/types";
-export * from "./features/activityPages/types";
+
 export * from "./features/businessSettings/types";
 export * from "./features/admin/types";
 export * from "./features/bookings/types";

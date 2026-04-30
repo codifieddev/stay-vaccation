@@ -8,7 +8,7 @@ import categoryReducer from "./features/categories/categorySlice";
 import regionReducer from "./features/regions/regionSlice";
 import couponReducer from "./features/coupons/couponSlice";
 import transferReducer from "./features/transfers/transferSlice";
-import activityPageReducer from "./features/activityPages/activityPageSlice";
+
 import businessSettingsReducer from "./features/businessSettings/businessSettingsSlice";
 import adminReducer from "./features/admin/adminSlice";
 import bookingReducer from "./features/bookings/bookingSlice";
@@ -26,7 +26,7 @@ export const store = configureStore({
     regions: regionReducer,
     coupons: couponReducer,
     transfers: transferReducer,
-    activityPages: activityPageReducer,
+
     businessSettings: businessSettingsReducer,
     admin: adminReducer,
     bookings: bookingReducer,

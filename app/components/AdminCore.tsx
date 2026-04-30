@@ -14,8 +14,7 @@ import { setTransfers } from "@/app/store/features/transfers/transferSlice";
 import { fetchTransfers, createTransfer, updateTransfer, deleteTransfer } from "@/app/store/features/transfers/transferThunks";
 import { setDestinations } from "@/app/store/features/destinations/destinationSlice";
 import { fetchDestinations, createDestination, updateDestination, deleteDestination } from "@/app/store/features/destinations/destinationThunks";
-import { setActivityPages } from "@/app/store/features/activityPages/activityPageSlice";
-import { fetchActivityPages, createActivityPage, updateActivityPage, deleteActivityPage } from "@/app/store/features/activityPages/activityPageThunks";
+
 import { setRegions } from "@/app/store/features/regions/regionSlice";
 import { fetchRegions, createRegion, updateRegion, deleteRegion } from "@/app/store/features/regions/regionThunks";
 import { setCategories } from "@/app/store/features/categories/categorySlice";
@@ -115,36 +114,7 @@ export interface MasterActivity {
   images: string[];
 }
 
-export interface ActivitiesPageActivity {
-  title: string;
-  image: string;
-  duration: string;
-  price: string | number;
-  rating: string | number;
-  slug?: string;
-}
 
-export interface ActivitiesPageReview {
-  name: string;
-  rating: number;
-  comment: string;
-  image: string;
-}
-
-export interface ActivityPage {
-  _id?: string;
-  slug: string;
-  city: string;
-  heroImages: string[];
-  description: {
-    short: string;
-    full: string;
-  };
-  activities: ActivitiesPageActivity[];
-  faqs: Faq[]; 
-  reviews: ActivitiesPageReview[];
-  updatedAt?: string;
-}
 
 export interface Region {
   _id: string;
@@ -844,224 +814,10 @@ const MasterHotelForm = ({ initial, onSave, onClose }) => {
 };
 
 // ─── ACTIVITY PAGE FORM ───────────────────────────────────────────
-export const ActivityPageForm = ({ initial, onSave, onClose }: { initial: any; onSave: (d: any) => void; onClose: () => void }) => {
-  const [data, setData] = useState(initial || {
-    slug: "", city: "", heroImages: [], 
-    description: { short: "", full: "" },
-    activities: [], faqs: [], reviews: []
-  });
 
-  const upd = (f: string, v: any) => setData(p => ({ ...p, [f]: v }));
-  const updDesc = (f: string, v: string) => setData(p => ({ ...p, description: { ...p.description, [f]: v } }));
-
-  const addActivity = () => upd("activities", [...data.activities, { title: "", image: "", duration: "", price: "", rating: "", slug: "" }]);
-  const updActivity = (i: number, f: string, v: any) => {
-    const next = [...data.activities];
-    next[i] = { ...next[i], [f]: v };
-    upd("activities", next);
-  };
-
-  const addFaq = () => upd("faqs", [...data.faqs, { id: uid(), question: "", answer: "" }]);
-  const updFaq = (i: number, f: string, v: string) => {
-    const next = [...data.faqs];
-    next[i] = { ...next[i], [f]: v };
-    upd("faqs", next);
-  };
-
-  const addReview = () => upd("reviews", [...data.reviews, { name: "", rating: 5, comment: "", image: "" }]);
-  const updReview = (i: number, f: string, v: any) => {
-    const next = [...data.reviews];
-    next[i] = { ...next[i], [f]: v };
-    upd("reviews", next);
-  };
-
-  return (
-    <div className="p-6 space-y-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
-      <div className="grid grid-cols-2 gap-4">
-        <div><FL required>City Name</FL><Inp placeholder="e.g. Paris" value={data.city} onChange={e => upd("city", e.target.value)} /></div>
-        <div><FL required>URL Slug</FL><Inp placeholder="e.g. things-to-do-in-paris" value={data.slug} onChange={e => upd("slug", e.target.value)} /></div>
-      </div>
-
-      <ImageUploader label="Hero Carousel Images" images={data.heroImages} onAdd={u => upd("heroImages", [...data.heroImages, u])} onRemove={i => upd("heroImages", data.heroImages.filter((_, j) => j !== i))} />
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-gray-900 border-b pb-2">Description Section</h3>
-        <div><FL>Short Summary</FL><TA value={data.description.short} onChange={e => updDesc("short", e.target.value)} rows={2} /></div>
-        <div><FL>Full Description (Rich Text/HTML)</FL><TA value={data.description.full} onChange={e => updDesc("full", e.target.value)} rows={5} /></div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-sm font-bold text-gray-900">Activities List</h3>
-          <Btn variant="outline" size="xs" onClick={addActivity}>+ Add Activity</Btn>
-        </div>
-        <div className="space-y-4">
-          {data.activities.map((act, i) => (
-            <Card key={i} className="p-4 grid grid-cols-4 gap-3">
-               <div className="col-span-3 space-y-3">
-                 <Inp placeholder="Activity Title" value={act.title} onChange={e => updActivity(i, "title", e.target.value)} />
-                 <div className="grid grid-cols-2 gap-2">
-                   <Inp placeholder="Duration" value={act.duration} onChange={e => updActivity(i, "duration", e.target.value)} />
-                   <Inp placeholder="Price (e.g. ₹999)" value={act.price} onChange={e => updActivity(i, "price", e.target.value)} />
-                 </div>
-                 <div className="grid grid-cols-2 gap-2">
-                   <Inp placeholder="Rating" value={act.rating} onChange={e => updActivity(i, "rating", e.target.value)} />
-                   <Inp placeholder="Activity Slug (e.g. qasr-al-watan-tickets)" value={act.slug || ""} onChange={e => updActivity(i, "slug", e.target.value)} />
-                 </div>
-               </div>
-               <div className="space-y-2">
-                 <ImageUploader label="Icon" images={act.image ? [act.image] : []} onAdd={u => updActivity(i, "image", u)} onRemove={() => updActivity(i, "image", "")} />
-                 <Btn variant="ghost" size="xs" className="w-full text-red-500" onClick={() => upd("activities", data.activities.filter((_, j) => j !== i))}>Remove</Btn>
-               </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-sm font-bold text-gray-900">FAQ Section</h3>
-          <Btn variant="outline" size="xs" onClick={addFaq}>+ Add FAQ</Btn>
-        </div>
-        <div className="space-y-3">
-          {data.faqs.map((f, i) => (
-            <Card key={i} className="p-4 space-y-2">
-              <div className="flex gap-2">
-                <Inp placeholder="Question" className="font-bold" value={f.question} onChange={e => updFaq(i, "question", e.target.value)} />
-                <Btn variant="ghost" size="xs" onClick={() => upd("faqs", data.faqs.filter((_, j) => j !== i))}>✕</Btn>
-              </div>
-              <TA placeholder="Answer" value={f.answer} onChange={e => updFaq(i, "answer", e.target.value)} />
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-sm font-bold text-gray-900">Reviews</h3>
-          <Btn variant="outline" size="xs" onClick={addReview}>+ Add Review</Btn>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {data.reviews.map((r, i) => (
-            <Card key={i} className="p-4 flex gap-3">
-               <div className="w-16 h-16 shrink-0">
-                  <ImageUploader label="User" images={r.image ? [r.image] : []} onAdd={u => updReview(i, "image", u)} onRemove={() => updReview(i, "image", "")} />
-               </div>
-               <div className="flex-1 space-y-2">
-                 <div className="flex gap-2">
-                    <Inp placeholder="Name" value={r.name} onChange={e => updReview(i, "name", e.target.value)} />
-                    <Inp type="number" placeholder="★" className="w-16" value={r.rating} onChange={e => updReview(i, "rating", e.target.value)} />
-                 </div>
-                 <TA placeholder="Review Comment" value={r.comment} onChange={e => updReview(i, "comment", e.target.value)} rows={2} />
-                 <Btn variant="ghost" size="xs" className="text-red-500" onClick={() => upd("reviews", data.reviews.filter((_, j) => j !== i))}>Remove Review</Btn>
-               </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="pt-6 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
-        <Btn variant="outline" onClick={onClose}>Cancel</Btn>
-        <Btn variant="success" onClick={() => onSave(data)}>Save Activity Page</Btn>
-      </div>
-    </div>
-  );
-};
 
 // ─── ACTIVITY PAGES LISTING ───────────────────────────────────────
-export const ActivityPageAdmin = () => {
-  const dispatch = useAppDispatch();
-  const { activityPages } = useAppSelector(state => state.activityPages);
-  const { masterActivities } = useAppSelector(state => state.activities);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<ActivityPage | null>(null);
 
-  const fetchPages = async () => {
-    try {
-      const data = await apiFetch<ActivityPage[]>("/api/activity-pages");
-      dispatch(setActivityPages(data));
-    } catch (e) {
-      console.error("Failed to fetch activity pages", e);
-    }
-  };
-
-  const onSave = async (data: ActivityPage) => {
-    const isEdit = !!data._id;
-    const url = isEdit ? `/api/activity-pages/${data.slug}` : "/api/activity-pages";
-    try {
-      const result = await apiFetch<any>(url, {
-        method: isEdit ? "PUT" : "POST",
-        body: JSON.stringify(data)
-      });
-      alert(result.message || "Saved successfully");
-      fetchPages();
-      setModalOpen(false);
-      setEditing(null);
-    } catch (e: any) {
-      alert("Error: " + e.message);
-    }
-  };
-
-  const onDelete = async (slug: string) => {
-    if (!confirm("Delete this page?")) return;
-    try {
-      const result = await apiFetch<any>(`/api/activity-pages/${slug}`, { method: "DELETE" });
-      alert(result.message || "Deleted successfully");
-      fetchPages();
-    } catch (e: any) {
-      alert("Delete failed: " + e.message);
-    }
-  };
-
-  return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Activity Landing Pages</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage dynamic CMS pages for "Things to do in..." sections.</p>
-        </div>
-        <Btn onClick={() => { setEditing(null); setModalOpen(true); }} size="lg">
-          <Ic.Plus /> Create City Page
-        </Btn>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activityPages.map(page => (
-          <Card key={page._id} className="overflow-hidden group hover:shadow-lg transition-all border-gray-100 flex flex-col">
-            <div className="relative aspect-video">
-              <img src={page.heroImages?.[0] || "/placeholder.jpg"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4">
-                <h3 className="text-white font-bold text-lg leading-tight uppercase tracking-tight">Things to do in {page.city}</h3>
-              </div>
-            </div>
-            <div className="p-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-4">
-                 <div className="flex items-center justify-between">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded">URL: /activities/{page.slug}</div>
-                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">{page.activities.length} Activities</Badge>
-                 </div>
-                 <p className="text-xs text-gray-500 line-clamp-2 italic leading-relaxed">"{page.description.short}"</p>
-              </div>
-              <div className="flex gap-2 mt-6 pt-4 border-t border-gray-50">
-                <Btn variant="outline" size="sm" className="flex-1" onClick={() => { setEditing(page); setModalOpen(true); }}>
-                  <Ic.Edit /> Edit
-                </Btn>
-                <Btn variant="danger" size="sm" className="flex-1" onClick={() => onDelete(page.slug)}>
-                  <Ic.Trash /> Delete
-                </Btn>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? "Edit Activity Page" : "Create Activity Page"} wide>
-        <ActivityPageForm initial={editing} onSave={onSave} onClose={() => { setModalOpen(false); setEditing(null); }} />
-      </Modal>
-    </div>
-  );
-};
 
 // ─── MASTER ACTIVITIES PAGE ───────────────────────────────────────
 export const MasterActivitiesPage = () => {
@@ -3753,7 +3509,7 @@ export const Sidebar = ({ page, setPage, counts }) => {
     { key: "bookings", label: "Bookings", icon: <Ic.Booking />, group: "main", badge: counts.bookings },
     { key: "transfers", label: "Transfers", icon: <Ic.Car />, group: "main", badge: counts.transfers },
     { key: "coupons", label: "Coupons", icon: <Ic.Tag />, group: "main", badge: counts.coupons },
-    { key: "activity-pages", label: "Activities Pages", icon: <Ic.Activity />, group: "main", badge: counts.activityPages },
+
     { key: "page-cms", label: "Page CMS", icon: <Ic.Document />, group: "main" },
     { key: "locations", label: "Locations", icon: <Ic.Globe />, group: "main" },
     { key: "categories", label: "Categories", icon: <Ic.Tag />, group: "main" },

@@ -86,7 +86,7 @@ export default function SearchBar({
   }, []);
 
   const getUrl = (dest: Destination) => {
-    if (dest.type === "state")  return `/locations?q=${encodeURIComponent(dest.name)}`;
+    if (dest.type === "state")  return `/destinations?q=${encodeURIComponent(dest.name)}`;
     return `/packages?destination=${encodeURIComponent(dest.name)}`;
   };
 

@@ -1,8 +1,6 @@
 import { Metadata } from "next";
-import { getDatabase } from "@/app/utils/getDatabase";
 import { getDestinationBySlug } from "@/app/utils/getDestinations";
 import { getActivitiesByDestination } from "@/app/utils/getActivities";
-import ActivityPageContent from "./ActivityPageContent";
 import ActivityClientPage from "@/app/components/ActivityClientPage";
 
 export const dynamic = "force-dynamic";
@@ -11,24 +9,7 @@ async function getActivityData(slug: string) {
   if (!slug) return null;
   const cleanSlug = slug.trim().toLowerCase();
 
-  // 1. Try to fetch CMS Activity Page DIRECTLY FROM DB
-  try {
-    const db = await getDatabase();
-
-    // Use case-insensitive regex for robustness
-    const cmsPage = await db.collection("activity_pages").findOne({
-      slug: { $regex: new RegExp(`^${cleanSlug}$`, "i") }
-    });
-
-    if (cmsPage) {
-      // Convert to plain object to avoid serialization issues
-      return { type: "cms", data: JSON.parse(JSON.stringify(cmsPage)) };
-    }
-  } catch (e) {
-    console.error("CMS DB FETCH ERROR", e);
-  }
-
-  // 2. Fallback: Try to fetch Destination + Master Activities
+  // Try to fetch Destination + Master Activities
   // If slug is "things-to-do-in-paris", try "paris"
   const cityMatch = cleanSlug.match(/things-to-do-in-(.+)/);
   const citySlug = cityMatch ? cityMatch[1] : cleanSlug;
@@ -36,14 +17,14 @@ async function getActivityData(slug: string) {
   const destination = await getDestinationBySlug(citySlug);
   if (destination) {
     const activities = await getActivitiesByDestination(citySlug);
-    return { type: "fallback", data: { destination, activities, slug: citySlug } };
+    return { destination, activities, slug: citySlug };
   }
 
   // Last attempt: Direct slug as destination
   const directDest = await getDestinationBySlug(cleanSlug);
   if (directDest) {
     const activities = await getActivitiesByDestination(cleanSlug);
-    return { type: "fallback", data: { destination: directDest, activities, slug: cleanSlug } };
+    return { destination: directDest, activities, slug: cleanSlug };
   }
 
   return null;
@@ -53,15 +34,10 @@ export async function generateMetadata({ params }: { params: Promise<{ citySlug:
   const { citySlug } = await params;
   const result = await getActivityData(citySlug);
 
-  if (result?.type === "cms") {
+  if (result) {
     return {
-      title: `Things to do in ${result.data.city} | Stay Vacation`,
-      description: result.data.description?.short || "Explore the best activities."
-    };
-  } else if (result?.type === "fallback") {
-    return {
-      title: `Things to do in ${result.data.destination.name} | Stay Vacation`,
-      description: result.data.destination.description || `Explore activities in ${result.data.destination.name}.`
+      title: `Things to do in ${result.destination.name} | Stay Vacation`,
+      description: result.destination.description || `Explore activities in ${result.destination.name}.`
     };
   }
 
@@ -71,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ citySlug:
 export default async function Page({ params }: { params: Promise<{ citySlug: string }> }) {
   const { citySlug } = await params;
   const result = await getActivityData(citySlug);
-  console.log("result---", result);
+  
   if (!result) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -83,15 +59,11 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     );
   }
 
-  if (result.type === "cms") {
-    return <ActivityPageContent page={result.data} />;
-  }
-
   return (
     <ActivityClientPage
-      destination={result.data.destination}
-      initialActivities={result.data.activities}
-      slug={result.data.slug}
+      destination={result.destination}
+      initialActivities={result.activities}
+      slug={result.slug}
     />
   );
 }

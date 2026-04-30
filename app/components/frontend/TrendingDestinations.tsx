@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useCurrency } from "@/app/hooks/useCurrency";
@@ -75,7 +76,7 @@ function EmptyState({ tab }: { tab: string }) {
         We haven't marked any {tab.toLowerCase()} destinations as trending yet. 
       </p>
       <Link
-        href="/destinations"
+        href={`/destinations?type=${tab.toLowerCase()}`}
         className="px-8 py-3 bg-[#1a3f4e] text-white font-bold rounded-full hover:shadow-xl hover:-translate-y-1 transition-all"
       >
         Explore All Destinations
@@ -134,6 +135,7 @@ function DestinationCard({ dest, index }: { dest: Destination; index: number }) 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function TrendingDestinations() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"India" | "International">("India");
   const dispatch = useAppDispatch();
   const { trendingIndia, trendingInternational, loading: reduxLoading, error: reduxError } = useAppSelector(state => state.destinations);
@@ -249,9 +251,9 @@ export default function TrendingDestinations() {
 
         {/* ── CTA ───────────────────────────────────────────────── */}
         <div className="text-center mt-8">
-          <Link
-            href="/destinations"
-            className="inline-flex items-center gap-3 text-[#1a3f4e] font-bold hover:gap-5 transition-all group"
+          <button
+            onClick={() => router.push(`/destinations?type=${activeTab}`)}
+            className="inline-flex items-center gap-3 text-[#1a3f4e] font-bold hover:gap-5 transition-all group cursor-pointer"
           >
             <span className="border-b-2 border-[#2fa3f2]/30 group-hover:border-[#2fa3f2] pb-1">
               Explore All Destinations
@@ -259,7 +261,7 @@ export default function TrendingDestinations() {
             <svg className="w-5 h-5 text-[#2fa3f2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-          </Link>
+          </button>
         </div>
 
       </div>

@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCurrency } from '@/app/hooks/useCurrency';
+import { useAppSelector } from '@/app/store/hooks';
+
 
 interface TourCardV2Props {
   pkg: {
@@ -31,6 +33,7 @@ interface TourCardV2Props {
 const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
   const { convert } = useCurrency();
   const [imgFailed, setImgFailed] = useState(false);
+  const { user } = useAppSelector((state) => state.auth);
 
   const id = pkg.id || pkg._id;
   const name = pkg.title || pkg.name || 'Premium Experience';
@@ -139,7 +142,11 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
 
           {/* Book Now Button */}
           <Link 
-            href={`/packages/${slug}`} 
+            href={
+              user 
+                ? `/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`
+                : `/login?from=${encodeURIComponent(`/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`)}`
+            } 
             className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(255,149,0,0.15)] hover:shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:-translate-y-0.5"
           >
             Book Now

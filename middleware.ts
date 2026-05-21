@@ -9,6 +9,48 @@ const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Protect /api/bookings API route
+  if (pathname.startsWith("/api/bookings")) {
+    let token = req.cookies.get("sv_token")?.value;
+
+    if (!token) {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+      }
+    }
+
+    if (!token) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      const { payload } = await jwtVerify(token, encodedSecret);
+      
+      // GET, PUT, and DELETE methods on /api/bookings require admin role
+      // Exempt my-bookings and specific booking GET requests from admin check
+      if (["GET", "PUT", "DELETE"].includes(req.method)) {
+        const isMyBookings = pathname === "/api/bookings/my-bookings";
+        const isSingleBooking = pathname.match(/^\/api\/bookings\/BK-\d{4}-\d{4}$/);
+        
+        if (!isMyBookings && !isSingleBooking) {
+          if (payload.role !== "admin") {
+            return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+          }
+        }
+      }
+      
+      // POST requires at least a valid logged-in user, which is verified by jwtVerify
+      return NextResponse.next();
+    } catch (error) {
+      console.error("Middleware booking verification failed:", error);
+      const response = NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+      response.cookies.delete("sv_token");
+      return response;
+    }
+  }
+
+
   // Paths that require the 'admin' role
   const isAdminPath = pathname.startsWith("/admin");
   
@@ -95,6 +137,8 @@ export const config = {
     "/api/activity-pages/:path*",
     "/api/business-settings/:path*",
     "/api/admin/:path*",
-    "/api/page-cms/:path*"
+    "/api/page-cms/:path*",
+    "/api/bookings/:path*",
+    "/api/bookings"
   ],
 };

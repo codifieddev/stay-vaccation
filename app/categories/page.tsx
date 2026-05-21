@@ -1,5 +1,5 @@
 import LayoutV2 from "../layouts-v2/LayoutV2";
-import PageHeroV2 from "../components-v2/PageHeroV2";
+import CategoriesHero from "../sections-v2/categoriespage/categoriesHero/CategoriesHero";
 import CategoryCardV2 from "../components-v2/CategoryCardV2";
 import ButtonV2 from "../components-v2/ButtonV2";
 import LucideIcon from "../components/LucideIcon";
@@ -46,12 +46,7 @@ export default async function CategoriesPage() {
 
   return (
     <LayoutV2>
-      <PageHeroV2 
-        title="Tour Categories" 
-        subtitle="From sun-soaked beaches to spiritual pilgrimages — find your perfect travel style among our curated categories."
-        badge="Browse by interest"
-        image="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&auto=format&fit=crop&q=80"
-      />
+      <CategoriesHero />
 
       <section style={{ padding: '6rem 0', background: 'var(--white)' }}>
         <div className="container-v2">

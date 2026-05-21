@@ -18,7 +18,11 @@ export default function BookingsContent() {
   }, [dispatch]);
 
   const handleStatusChange = async (booking: Booking, newStatus: string) => {
-    const updated = { ...booking, status: newStatus as Booking["status"] };
+    const updated = {
+      ...booking,
+      status: newStatus as Booking["status"],
+      bookingStatus: newStatus as Booking["bookingStatus"]
+    };
     const result = await dispatch(updateBooking(updated));
     if (updateBooking.fulfilled.match(result)) {
       if (selected?.id === booking.id) setSelected(updated);
@@ -35,10 +39,23 @@ export default function BookingsContent() {
     }
   };
 
-  const filtered = bookings.filter(b =>
-    (!search || b.userName.toLowerCase().includes(search.toLowerCase()) || (b.packageTitle && b.packageTitle.toLowerCase().includes(search.toLowerCase()))) &&
-    (statusFilter === "all" || b.status === statusFilter)
-  );
+  const filtered = bookings.filter(b => {
+    const searchLower = search.toLowerCase().trim();
+    const matchesSearch =
+      !searchLower ||
+      (b.bookingId && b.bookingId.toLowerCase().includes(searchLower)) ||
+      (b.userName && b.userName.toLowerCase().includes(searchLower)) ||
+      (b.packageName && b.packageName.toLowerCase().includes(searchLower)) ||
+      (b.packageTitle && b.packageTitle.toLowerCase().includes(searchLower)) ||
+      (b.userEmail && b.userEmail.toLowerCase().includes(searchLower));
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      b.status === statusFilter ||
+      b.bookingStatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-5">
@@ -55,31 +72,40 @@ export default function BookingsContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
-                {["User", "Package", "Date", "Status", "Total", "Action"].map(h => (
+                {["Booking ID", "User", "Package", "Date", "Status", "Total", "Action"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading && bookings.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-gray-400">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">No bookings found.</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-gray-400">No bookings found.</td></tr>
               ) : filtered.map(b => (
                 <tr key={b.id} className="hover:bg-blue-50/20 transition-colors">
+                  <td className="px-4 py-3.5 font-mono font-bold text-xs text-orange-600 bg-orange-50/20">
+                    {b.bookingId || "N/A"}
+                  </td>
                   <td className="px-4 py-3.5">
                     <div>
                       <p className="font-bold text-gray-900 leading-tight">{b.userName}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{b.userEmail}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5"><p className="text-xs font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md inline-block">{b.packageTitle || "N/A"}</p></td>
+                  <td className="px-4 py-3.5">
+                    <p className="text-xs font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md inline-block">
+                      {b.packageName || b.packageTitle || "N/A"}
+                    </p>
+                  </td>
                   <td className="px-4 py-3.5 text-xs text-gray-600">{b.travelDate}</td>
                   <td className="px-4 py-3.5">
                     <Badge className={
-                      b.status === "confirmed" ? "bg-emerald-100 text-emerald-800" :
-                      b.status === "pending" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
-                    }>{b.status}</Badge>
+                      (b.bookingStatus || b.status) === "confirmed" ? "bg-emerald-100 text-emerald-800" :
+                      (b.bookingStatus || b.status) === "pending" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                    }>
+                      {b.bookingStatus || b.status}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3.5 font-bold text-gray-900">{getCurrSym(b.currency || "INR")}{Number(b.totalAmount || 0).toLocaleString()}</td>
                   <td className="px-4 py-3.5">
@@ -99,11 +125,17 @@ export default function BookingsContent() {
         {selected && (
           <div className="p-6 space-y-6">
             <div className="flex justify-between items-start">
-              <div><h2 className="text-xl font-bold text-gray-900">Booking Details</h2><p className="text-xs text-gray-400">ID: {selected.id}</p></div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Booking Details</h2>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <p className="text-xs font-mono font-bold text-orange-600">Booking ID: {selected.bookingId || "N/A"}</p>
+                  <p className="text-[10px] text-gray-400">System ID: {selected.id}</p>
+                </div>
+              </div>
               <Badge className={
-                selected.status === "confirmed" ? "bg-emerald-100 text-emerald-800 text-sm py-1 px-3" :
-                selected.status === "pending" ? "bg-amber-100 text-amber-800 text-sm py-1 px-3" : "bg-red-100 text-red-800 text-sm py-1 px-3"
-              }>{selected.status}</Badge>
+                (selected.bookingStatus || selected.status) === "confirmed" ? "bg-emerald-100 text-emerald-800 text-sm py-1 px-3 border-emerald-200" :
+                (selected.bookingStatus || selected.status) === "pending" ? "bg-amber-100 text-amber-800 text-sm py-1 px-3 border-amber-200" : "bg-red-100 text-red-800 text-sm py-1 px-3 border-red-200"
+              }>{selected.bookingStatus || selected.status}</Badge>
             </div>
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-4">
@@ -123,10 +155,10 @@ export default function BookingsContent() {
               <div className="space-y-4">
                 <section>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Booked Package</label>
-                  <p className="text-sm font-bold mt-2 text-blue-900">{selected.packageTitle || "N/A"}</p>
+                  <p className="text-sm font-bold mt-2 text-blue-900">{selected.packageName || selected.packageTitle || "N/A"}</p>
                   <div className="flex gap-4 mt-2">
-                    <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">Adults: <span className="font-bold text-gray-900">{selected.adults}</span></span>
-                    <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">Children: <span className="font-bold text-gray-900">{selected.children}</span></span>
+                    <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">Adults: <span className="font-bold text-gray-900">{selected.travellers?.adults ?? selected.adults}</span></span>
+                    <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">Children: <span className="font-bold text-gray-900">{selected.travellers?.children ?? selected.children}</span></span>
                   </div>
                 </section>
                 <section className="p-4 bg-blue-900 text-white rounded-2xl shadow-lg border border-blue-800">
@@ -138,13 +170,27 @@ export default function BookingsContent() {
             {selected.notes && (
               <section>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Guest Notes</label>
-                <p className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm italic text-gray-600 mt-2">\"{selected.notes}\"</p>
+                <p className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm italic text-gray-600 mt-2">&ldquo;{selected.notes}&rdquo;</p>
               </section>
             )}
-            <div className="pt-6 border-t flex justify-end gap-3">
-              <Btn variant="outline" onClick={() => setDetailOpen(false)}>Close</Btn>
-              {selected.status === "pending" && <Btn variant="success" onClick={() => handleStatusChange(selected, "confirmed")}>Confirm Booking</Btn>}
-              {selected.status !== "cancelled" && <Btn variant="danger" onClick={() => handleStatusChange(selected, "cancelled")}>Cancel Booking</Btn>}
+            <div className="pt-6 border-t flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-400 uppercase">Change Status:</span>
+                <div className="w-36">
+                  <Sel
+                    value={selected.bookingStatus || selected.status}
+                    onChange={(e) => handleStatusChange(selected, e.target.value)}
+                    options={[
+                      { label: "Pending", value: "pending" },
+                      { label: "Confirmed", value: "confirmed" },
+                      { label: "Cancelled", value: "cancelled" }
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Btn variant="outline" onClick={() => setDetailOpen(false)}>Close</Btn>
+              </div>
             </div>
           </div>
         )}

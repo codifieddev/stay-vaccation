@@ -188,6 +188,11 @@ export default function NavbarV2() {
                                 Admin Panel
                               </Link>
                             )}
+                            <Link href="/my-bookings" onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3.5 px-4 py-3.5 text-[0.75rem] font-bold uppercase tracking-widest text-[#1a1a2e]/70 hover:bg-gray-50 hover:text-[#ff9500] rounded-2xl transition-all">
+                              <LucideIcon name="Calendar" size={15} />
+                              My Bookings
+                            </Link>
                             <button onClick={handleLogout}
                               className="w-full flex items-center gap-3.5 px-4 py-3.5 text-[0.75rem] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 hover:text-red-600 rounded-2xl transition-all">
                                 <LucideIcon name="LogOut" size={15} />
@@ -273,6 +278,17 @@ export default function NavbarV2() {
                   </Link>
                 );
               })}
+              {user && (
+                <Link
+                  href="/my-bookings"
+                  onClick={() => setMobileOpen(false)}
+                  className={`text-2xl font-[900] tracking-tight transition-all duration-300 ${
+                    pathname === "/my-bookings" ? "text-[#ff9500] scale-110" : "text-[#1a1a2e] hover:text-[#ff9500]"
+                  }`}
+                >
+                  My Bookings
+                </Link>
+              )}
             </nav>
 
             <div className="flex flex-col items-center gap-4 w-full max-w-xs mt-8">

@@ -1,17 +1,27 @@
 export interface Booking {
   id: string;
-  userName: string;
-  userEmail: string;
-  userPhone: string;
+  bookingId: string;
+  userId: string;
   packageId?: string;
+  packageName?: string;
   packageTitle?: string;
   totalAmount: number;
   currency: string;
+  bookingStatus: "pending" | "confirmed" | "cancelled";
   status: "pending" | "confirmed" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed";
+  bookingDate: string;
   travelDate: string;
   returnDate?: string;
+  travellers: {
+    adults: number;
+    children: number;
+  };
   adults: number;
   children: number;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
   notes?: string;
 }
 

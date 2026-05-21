@@ -122,6 +122,7 @@ export default function SinglePackagePage() {
   const matchedId = params?.id as string;
 
   const { packages, loading: reduxLoading } = useAppSelector(state => state.packages);
+  const { user } = useAppSelector(state => state.auth);
   const pkg = packages.find(p => p.id === matchedId || p._id === matchedId);
   const loading = reduxLoading && !pkg;
   
@@ -243,6 +244,21 @@ export default function SinglePackagePage() {
   const savings = hasDiscount ? formatPrice(savingsValue, "INR") : null;
   const days = pkg.tripDuration?.match(/^(\d+)/)?.[1] || "—";
   const nights = pkg.tripDuration?.match(/(\d+)\s*Night/i)?.[1] || String(Number(days) - 1);
+  const getBookingUrl = () => {
+    const searchParamsObj = new URLSearchParams({
+      packageId: matchedId,
+      packageName: pkg.title,
+      price: String(basePriceValue),
+      duration: pkg.duration || pkg.tripDuration || "Flexible",
+      destination: pkg.location || pkg.destination || "Global",
+      currency: pkg.price?.currency || "INR",
+    });
+    if (form.date) searchParamsObj.append("date", form.date);
+    if (form.adults) searchParamsObj.append("adults", form.adults);
+    
+    const target = `/booking?${searchParamsObj.toString()}`;
+    return user ? target : `/login?from=${encodeURIComponent(target)}`;
+  };
 
   return (
     <LayoutV2>
@@ -768,17 +784,12 @@ export default function SinglePackagePage() {
                         </div>
                       </div>
 
-                      <button 
-                        type="submit" 
-                        disabled={sending || !isFormValid} 
-                        className={`w-full py-4.5 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-3 ${
-                          sending || !isFormValid 
-                          ? 'bg-gray-300 shadow-none cursor-not-allowed' 
-                          : 'bg-gradient-to-r from-[#ff9500] to-[#ff6b00] shadow-[0_6px_20px_rgba(255,149,0,0.2)] hover:shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:-translate-y-0.5 active:scale-[0.98]'
-                        }`}
+                      <Link 
+                        href={getBookingUrl()}
+                        className="w-full py-4.5 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-[0_6px_20px_rgba(255,149,0,0.2)] hover:shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-[#ff9500] to-[#ff6b00]"
                       >
-                        {sending ? "Sending..." : "Book Your Spot"}
-                      </button>
+                        {user ? "Book Your Spot" : "Sign In to Book"}
+                      </Link>
                     </form>
                   )}
                 </div>

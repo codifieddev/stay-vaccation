@@ -106,7 +106,7 @@ const DESTINATIONS = [
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams } = req.nextUrl;
   const q = (searchParams.get("q") || "").trim();
 
   if (!q || q.length < 1) {

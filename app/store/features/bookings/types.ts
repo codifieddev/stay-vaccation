@@ -28,6 +28,46 @@ export interface Booking {
   orderId?: string;
   signature?: string;
   transactionDetails?: any;
+  pendingEdit?: {
+    requestId: string;
+    adults: number;
+    children: number;
+    travelDate: string;
+    returnDate?: string;
+    notes: string;
+    totalAmount: number;
+    paymentSummary: any;
+    status: string;
+    requestedAt: string;
+    processedAt?: string;
+    adminNotes?: string;
+  } | null;
+  editRequests?: Array<{
+    requestId: string;
+    adults: number;
+    children: number;
+    travelDate: string;
+    returnDate?: string;
+    notes: string;
+    totalAmount: number;
+    paymentSummary: any;
+    status: string;
+    requestedAt: string;
+    processedAt?: string;
+    adminNotes?: string;
+  }>;
+  editHistory?: Array<{
+    oldAdults: number;
+    oldChildren: number;
+    newAdults: number;
+    newChildren: number;
+    oldTravelerCount: number;
+    newTravelerCount: number;
+    previousAmount: number;
+    updatedAmount: number;
+    modifiedBy: string;
+    timestamp: string;
+  }>;
 }
 
 export interface BookingsState {

@@ -14,6 +14,8 @@ export default function BookingsContent() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [localAdminNotes, setLocalAdminNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [modNotes, setModNotes] = useState("");
+  const [processingMod, setProcessingMod] = useState(false);
 
   useEffect(() => {
     dispatch(fetchBookings());
@@ -22,8 +24,10 @@ export default function BookingsContent() {
   useEffect(() => {
     if (selected) {
       setLocalAdminNotes(selected.adminNotes || "");
+      setModNotes("");
     } else {
       setLocalAdminNotes("");
+      setModNotes("");
     }
   }, [selected]);
 
@@ -41,6 +45,36 @@ export default function BookingsContent() {
       alert("Admin notes saved successfully!");
     } else {
       alert("Failed to save admin notes.");
+    }
+  };
+
+  const handleProcessModification = async (action: "approve" | "reject") => {
+    if (!selected || !selected.bookingId) return;
+    if (!confirm(`Are you sure you want to ${action} this modification request?`)) return;
+
+    setProcessingMod(true);
+    try {
+      const res = await fetch(`/api/bookings/${selected.bookingId}/process-edit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action, adminNotes: modNotes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Modification request successfully ${action}d!`);
+        setSelected(data.data);
+        dispatch(fetchBookings());
+        setModNotes("");
+      } else {
+        alert(`Error processing request: ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Error processing modification:", err);
+      alert("Failed to process modification.");
+    } finally {
+      setProcessingMod(false);
     }
   };
 
@@ -256,6 +290,116 @@ export default function BookingsContent() {
                 </section>
               </div>
             </div>
+
+            {/* Pending Modification Block */}
+            {selected.pendingEdit && (
+              <section className="bg-gradient-to-br from-amber-50/60 to-orange-50/30 border border-amber-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-955 flex items-center gap-1.5">
+                      <span className="text-amber-500 text-base">⚠️</span> Pending Modification Request
+                    </h3>
+                    <p className="text-[10px] text-amber-700">Requested on {new Date(selected.pendingEdit.requestedAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-bold uppercase tracking-wide text-[10px]">Awaiting Action</Badge>
+                </div>
+                
+                <div className="overflow-hidden border border-amber-100 rounded-xl bg-white/70 backdrop-blur-sm">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-amber-50/50 border-b border-amber-100 text-[10px] text-amber-900 font-bold uppercase tracking-wider">
+                        <th className="text-left px-3 py-2">Detail Field</th>
+                        <th className="text-left px-3 py-2">Current Booking</th>
+                        <th className="text-left px-3 py-2 text-orange-700 bg-orange-50/30">Proposed Edit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100/50">
+                      <tr>
+                        <td className="px-3 py-2 font-medium text-slate-500">Travel Date</td>
+                        <td className="px-3 py-2 text-slate-700">{selected.travelDate}</td>
+                        <td className={`px-3 py-2 font-bold bg-orange-50/10 ${selected.travelDate !== selected.pendingEdit.travelDate ? "text-orange-600 font-black" : "text-slate-700"}`}>
+                          {selected.pendingEdit.travelDate}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-medium text-slate-500">Return Date</td>
+                        <td className="px-3 py-2 text-slate-700">{selected.returnDate || "N/A"}</td>
+                        <td className={`px-3 py-2 font-bold bg-orange-50/10 ${selected.returnDate !== selected.pendingEdit.returnDate ? "text-orange-600 font-black" : "text-slate-700"}`}>
+                          {selected.pendingEdit.returnDate || "N/A"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-medium text-slate-500">Occupants (A / C)</td>
+                        <td className="px-3 py-2 text-slate-700">
+                          {selected.travellers?.adults ?? selected.adults} Adults, {selected.travellers?.children ?? selected.children} Children
+                        </td>
+                        <td className={`px-3 py-2 font-bold bg-orange-50/10 ${
+                          (selected.travellers?.adults ?? selected.adults) !== selected.pendingEdit.adults ||
+                          (selected.travellers?.children ?? selected.children) !== selected.pendingEdit.children
+                            ? "text-orange-600 font-black" : "text-slate-700"
+                        }`}>
+                          {selected.pendingEdit.adults} Adults, {selected.pendingEdit.children} Children
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-medium text-slate-500">Total Price</td>
+                        <td className="px-3 py-2 text-slate-700">
+                          {getCurrSym(selected.currency || "INR")}{Number(selected.totalAmount || 0).toLocaleString()}
+                        </td>
+                        <td className={`px-3 py-2 font-bold bg-orange-50/10 ${selected.totalAmount !== selected.pendingEdit.totalAmount ? "text-orange-600 font-black" : "text-slate-700"}`}>
+                          {getCurrSym(selected.currency || "INR")}{Number(selected.pendingEdit.totalAmount).toLocaleString()}
+                          {selected.totalAmount !== selected.pendingEdit.totalAmount && (
+                            <span className={`ml-1 text-[10px] ${selected.pendingEdit.totalAmount > selected.totalAmount ? "text-red-500" : "text-emerald-600 font-black"}`}>
+                              ({selected.pendingEdit.totalAmount > selected.totalAmount ? "+" : ""}
+                              {Number(selected.pendingEdit.totalAmount - selected.totalAmount).toLocaleString()})
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      {selected.pendingEdit.notes && (
+                        <tr>
+                          <td className="px-3 py-2 font-medium text-slate-500">Proposed Notes</td>
+                          <td colSpan={2} className="px-3 py-2 text-slate-600 bg-amber-50/20 italic font-medium">
+                            &ldquo;{selected.pendingEdit.notes}&rdquo;
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Modification Admin Notes Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Decision Notes / Comments</label>
+                  <textarea
+                    className="w-full px-3 py-2 text-xs border border-amber-200 rounded-xl bg-white text-slate-800 placeholder:text-amber-700/40 focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 transition-all duration-300 resize-none shadow-sm"
+                    rows={2}
+                    placeholder="Add notes explaining the approval or rejection (will be sent to customer)..."
+                    value={modNotes}
+                    onChange={(e) => setModNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Modification Decision Buttons */}
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => handleProcessModification("reject")}
+                    disabled={processingMod}
+                    className="px-4 py-2 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 disabled:opacity-50 rounded-xl transition-colors duration-150 flex items-center gap-1 shadow-sm"
+                  >
+                    ❌ Reject Modification
+                  </button>
+                  <button
+                    onClick={() => handleProcessModification("approve")}
+                    disabled={processingMod}
+                    className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/10 disabled:opacity-50 rounded-xl transition-all duration-150 flex items-center gap-1"
+                  >
+                    ✓ Approve & Apply
+                  </button>
+                </div>
+              </section>
+            )}
+
             {selected.notes && (
               <section>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Guest Notes</label>
@@ -303,6 +447,123 @@ export default function BookingsContent() {
                 </div>
               </div>
             </section>
+
+            {/* Modification Requests History */}
+            {selected.editRequests && selected.editRequests.length > 0 && (
+              <section className="space-y-3">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Modification History</label>
+                <div className="space-y-4 border-l-2 border-slate-100 pl-4 ml-2">
+                  {selected.editRequests.map((req: any, idx: number) => {
+                    const reqDate = new Date(req.requestedAt).toLocaleString("en-US", {
+                      month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit"
+                    });
+                    const procDate = req.processedAt ? new Date(req.processedAt).toLocaleString("en-US", {
+                      month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit"
+                    }) : null;
+                    
+                    return (
+                      <div key={req.requestId || idx} className="relative space-y-1 pb-1">
+                        {/* Marker dot */}
+                        <span className={`absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${
+                          req.status === "approved" ? "bg-emerald-500" :
+                          req.status === "rejected" ? "bg-rose-500" : "bg-amber-500"
+                        }`} />
+                        <div className="flex justify-between items-center">
+                          <p className="text-[11px] font-bold text-slate-700">
+                            Request on {reqDate}
+                          </p>
+                          <Badge className={
+                            req.status === "approved" ? "bg-emerald-50 text-emerald-800 border-emerald-100" :
+                            req.status === "rejected" ? "bg-rose-50 text-rose-800 border-rose-100" : "bg-amber-50 text-amber-800 border-amber-100"
+                          }>
+                            {req.status}
+                          </Badge>
+                        </div>
+                        <div className="text-[11px] text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                            <p><span className="text-slate-400">Travel Date:</span> <span className="font-semibold text-slate-700">{req.travelDate}</span></p>
+                            <p><span className="text-slate-400">Return Date:</span> <span className="font-semibold text-slate-700">{req.returnDate || "N/A"}</span></p>
+                            <p><span className="text-slate-400">Travelers:</span> <span className="font-semibold text-slate-700">{req.adults} Adults, {req.children} Children</span></p>
+                            <p><span className="text-slate-400">Total Price:</span> <span className="font-semibold text-slate-700">{getCurrSym(selected.currency || "INR")}{Number(req.totalAmount).toLocaleString()}</span></p>
+                          </div>
+                          {req.notes && (
+                            <p className="text-[11px] text-slate-500 italic mt-1 border-t border-slate-100 pt-1.5">
+                              &ldquo;{req.notes}&rdquo;
+                            </p>
+                          )}
+                          {req.adminNotes && (
+                            <p className="text-[11px] text-indigo-800 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100/30">
+                              <span className="font-semibold">Admin Feedback:</span> &ldquo;{req.adminNotes}&rdquo;
+                            </p>
+                          )}
+                          {procDate && (
+                            <p className="text-[10px] text-slate-400 text-right mt-1">Processed on {procDate}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Booking Edit History Tracking */}
+            {selected.editHistory && selected.editHistory.length > 0 && (
+              <section className="space-y-3">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Applied Edit History</label>
+                <div className="space-y-3">
+                  {selected.editHistory.map((hist: any, idx: number) => {
+                    const changeDate = new Date(hist.timestamp).toLocaleString("en-US", {
+                      month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit"
+                    });
+                    
+                    const amountDiff = hist.updatedAmount - hist.previousAmount;
+
+                    return (
+                      <div key={idx} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-2.5 transition-colors">
+                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <span className="text-slate-500 font-extrabold">✏️ Edit #{idx + 1}</span>
+                            <span>•</span>
+                            <span>{changeDate}</span>
+                          </span>
+                          <span className="bg-slate-200/60 text-slate-700 px-2 py-0.5 rounded font-mono">
+                            By: {hist.modifiedBy}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          {/* Traveler change */}
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Travelers Count</span>
+                            <div className="flex items-center gap-2 font-bold text-slate-700">
+                              <span>{hist.oldAdults}A/{hist.oldChildren}C (Total: {hist.oldTravelerCount ?? (hist.oldAdults + hist.oldChildren)})</span>
+                              <span className="text-slate-400">➔</span>
+                              <span className="text-blue-600">{hist.newAdults}A/{hist.newChildren}C (Total: {hist.newTravelerCount ?? (hist.newAdults + hist.newChildren)})</span>
+                            </div>
+                          </div>
+                          
+                          {/* Amount change */}
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Price Adjustment</span>
+                            <div className="flex items-center gap-2 font-bold text-slate-700">
+                              <span>{getCurrSym(selected.currency || "INR")}{Number(hist.previousAmount).toLocaleString()}</span>
+                              <span className="text-slate-400">➔</span>
+                              <span className="text-blue-600">{getCurrSym(selected.currency || "INR")}{Number(hist.updatedAmount).toLocaleString()}</span>
+                            </div>
+                            {amountDiff !== 0 && (
+                              <span className={`text-[10px] font-bold block mt-0.5 ${amountDiff < 0 ? "text-emerald-600" : "text-amber-600"}`}>
+                                {amountDiff > 0 ? "+" : ""}{getCurrSym(selected.currency || "INR")}{Number(amountDiff).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             <div className="pt-6 border-t flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">

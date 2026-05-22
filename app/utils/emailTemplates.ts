@@ -548,3 +548,341 @@ Manage bookings: ${APP_URL}/admin/bookings`;
 
   return { subject, html: baseLayout(body, previewText), text };
 }
+
+// ---------------------------------------------------------------------------
+// 4. Booking Modification Templates
+// ---------------------------------------------------------------------------
+export interface ModificationRequestTemplateData {
+  bookingId: string;
+  packageName: string;
+  userName: string;
+  userEmail: string;
+  currentDetails: {
+    travelDate: string;
+    returnDate?: string;
+    travellers: { adults: number; children: number };
+    totalAmount: number;
+  };
+  proposedDetails: {
+    travelDate: string;
+    returnDate?: string;
+    travellers: { adults: number; children: number };
+    totalAmount: number;
+    notes?: string;
+  };
+  currency?: string;
+}
+
+export function bookingModificationRequestTemplate(data: ModificationRequestTemplateData) {
+  const theme = getStatusTheme("pending");
+  const currency = data.currency || "INR";
+  const subject = `⏳ Modification Requested: Booking ${data.bookingId} — ${data.packageName}`;
+  const previewText = `We have received your request to modify booking ${data.bookingId}`;
+
+  const currentT = formatTravellers(data.currentDetails.travellers);
+  const proposedT = formatTravellers(data.proposedDetails.travellers);
+  const currentAmt = formatCurrency(data.currentDetails.totalAmount, currency);
+  const proposedAmt = formatCurrency(data.proposedDetails.totalAmount, currency);
+
+  const diffAmount = data.proposedDetails.totalAmount - data.currentDetails.totalAmount;
+  const isRefund = diffAmount < 0;
+  const absDiff = Math.abs(diffAmount);
+  const diffText = diffAmount === 0 
+    ? "No price change" 
+    : `${isRefund ? "Estimated Refund" : "Additional Amount Due"}: ${formatCurrency(absDiff, currency)}`;
+
+  const body = `
+    ${sharedHeader()}
+    <tr><td class="status-banner" style="background:${theme.bannerBg};">
+      <span class="status-icon">${theme.icon}</span>
+      <h1 class="status-title" style="color:${theme.bannerText};">Modification Request Received</h1>
+      <p class="status-subtitle" style="color:${theme.bannerText};">Booking ID: ${data.bookingId} — Awaiting admin approval</p>
+    </td></tr>
+    <tr><td class="content">
+      <h2 class="greeting">Hi ${data.userName},</h2>
+      <p class="intro">
+        We have received your request to modify your booking for <strong>${data.packageName}</strong>.
+        Our operations team is reviewing the availability. Once approved, the changes will be committed and you will be notified.
+      </p>
+
+      <div class="card">
+        <p class="card-title">Proposed Changes Comparison</p>
+        <table class="detail-table" role="presentation">
+          <tr>
+            <td class="dl" style="font-weight:bold;color:#475569;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Field</td>
+            <td class="dv" style="font-weight:bold;color:#475569;border-bottom:2px solid #e2e8f0;padding-bottom:8px;text-align:right;">Current</td>
+            <td class="dv" style="font-weight:bold;color:#ff6b00;border-bottom:2px solid #e2e8f0;padding-bottom:8px;text-align:right;">Proposed</td>
+          </tr>
+          <tr>
+            <td class="dl">Travel Date</td>
+            <td class="dv">${formatDate(data.currentDetails.travelDate)}</td>
+            <td class="dv" style="color:#ff6b00;">${formatDate(data.proposedDetails.travelDate)}</td>
+          </tr>
+          <tr>
+            <td class="dl">Return Date</td>
+            <td class="dv">${data.currentDetails.returnDate ? formatDate(data.currentDetails.returnDate) : "-"}</td>
+            <td class="dv" style="color:#ff6b00;">${data.proposedDetails.returnDate ? formatDate(data.proposedDetails.returnDate) : "-"}</td>
+          </tr>
+          <tr>
+            <td class="dl">Travelers</td>
+            <td class="dv">${currentT}</td>
+            <td class="dv" style="color:#ff6b00;">${proposedT}</td>
+          </tr>
+          <tr>
+            <td class="dl">Total Price</td>
+            <td class="dv">${currentAmt}</td>
+            <td class="dv" style="color:#ff6b00;">${proposedAmt}</td>
+          </tr>
+          <tr class="total-row">
+            <td class="total-label">Adjustment</td>
+            <td colspan="2" class="total-value" style="color: ${isRefund ? '#10b981' : '#ff6b00'}; text-align: right;">
+              ${diffText}
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      ${data.proposedDetails.notes ? `
+      <div class="card" style="border-color:#cbd5e1;">
+        <p class="card-title">Special Requests / Notes</p>
+        <p style="font-size:14px;color:#475569;margin:0;line-height:1.6;">${data.proposedDetails.notes}</p>
+      </div>` : ""}
+
+      <div class="cta-wrap">
+        <a href="${APP_URL}/account/bookings" class="btn">View My Bookings →</a>
+      </div>
+    </td></tr>`;
+
+  const text = `Hi ${data.userName},
+
+We have received your booking modification request for ${data.packageName}.
+Booking ID: ${data.bookingId}
+
+--- COMPARISON ---
+Travel Date: ${formatDate(data.currentDetails.travelDate)} -> ${formatDate(data.proposedDetails.travelDate)}
+Return Date: ${data.currentDetails.returnDate ? formatDate(data.currentDetails.returnDate) : "-"} -> ${data.proposedDetails.returnDate ? formatDate(data.proposedDetails.returnDate) : "-"}
+Travelers:   ${currentT} -> ${proposedT}
+Total Price: ${currentAmt} -> ${proposedAmt}
+Adjustment:  ${diffText}
+
+Special Requests: ${data.proposedDetails.notes || "None"}
+
+Your request is currently pending admin approval. You will receive another email once it is processed.
+
+View bookings: ${APP_URL}/account/bookings`;
+
+  return { subject, html: baseLayout(body, previewText), text };
+}
+
+export interface AdminModificationAlertData extends ModificationRequestTemplateData {
+  userPhone?: string;
+}
+
+export function adminBookingModificationAlertTemplate(data: AdminModificationAlertData) {
+  const theme = getStatusTheme("pending");
+  const currency = data.currency || "INR";
+  const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
+
+  const subject = `⚠️ Action Required: Modification Request for Booking ${data.bookingId}`;
+  const previewText = `New booking modification request from ${data.userName}`;
+
+  const currentT = formatTravellers(data.currentDetails.travellers);
+  const proposedT = formatTravellers(data.proposedDetails.travellers);
+  const currentAmt = formatCurrency(data.currentDetails.totalAmount, currency);
+  const proposedAmt = formatCurrency(data.proposedDetails.totalAmount, currency);
+
+  const diffAmount = data.proposedDetails.totalAmount - data.currentDetails.totalAmount;
+  const isRefund = diffAmount < 0;
+  const absDiff = Math.abs(diffAmount);
+  const diffText = diffAmount === 0 
+    ? "No price change" 
+    : `${isRefund ? "Refund Estimated" : "Additional Charge"}: ${formatCurrency(absDiff, currency)}`;
+
+  const body = `
+    <tr><td style="background:#fffbeb;border-bottom:3px solid #f59e0b;padding:20px 30px;text-align:center;">
+      <p style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#92400e;margin:0 0 4px;">StayVacation Admin Alert</p>
+      <h1 style="font-size:20px;font-weight:900;color:#0f172a;margin:0;">🔄 Modification Requested</h1>
+      <p style="font-size:13px;color:#64748b;margin:6px 0 0;">Review pending for Booking ID: ${data.bookingId}</p>
+    </td></tr>
+    <tr><td class="content">
+
+      <div class="alert-card" style="background:#fffbeb;border-color:#f59e0b;">
+        <p style="margin:0;font-size:13px;font-weight:700;color:#92400e;">
+          Modification requested on ${timestamp}. Action required in admin panel.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Customer Information</p>
+        <table class="detail-table" role="presentation">
+          <tr><td class="dl">Name</td><td class="dv">${data.userName}</td></tr>
+          <tr><td class="dl">Email</td><td class="dv"><a href="mailto:${data.userEmail}">${data.userEmail}</a></td></tr>
+          ${data.userPhone ? `<tr><td class="dl">Phone</td><td class="dv">${data.userPhone}</td></tr>` : ""}
+        </table>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Proposed Changes Comparison</p>
+        <table class="detail-table" role="presentation">
+          <tr>
+            <td class="dl" style="font-weight:bold;color:#475569;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Field</td>
+            <td class="dv" style="font-weight:bold;color:#475569;border-bottom:2px solid #e2e8f0;padding-bottom:8px;text-align:right;">Current</td>
+            <td class="dv" style="font-weight:bold;color:#ff6b00;border-bottom:2px solid #e2e8f0;padding-bottom:8px;text-align:right;">Proposed</td>
+          </tr>
+          <tr>
+            <td class="dl">Travel Date</td>
+            <td class="dv">${formatDate(data.currentDetails.travelDate)}</td>
+            <td class="dv" style="color:#ff6b00;">${formatDate(data.proposedDetails.travelDate)}</td>
+          </tr>
+          <tr>
+            <td class="dl">Return Date</td>
+            <td class="dv">${data.currentDetails.returnDate ? formatDate(data.currentDetails.returnDate) : "-"}</td>
+            <td class="dv" style="color:#ff6b00;">${data.proposedDetails.returnDate ? formatDate(data.proposedDetails.returnDate) : "-"}</td>
+          </tr>
+          <tr>
+            <td class="dl">Travelers</td>
+            <td class="dv">${currentT}</td>
+            <td class="dv" style="color:#ff6b00;">${proposedT}</td>
+          </tr>
+          <tr>
+            <td class="dl">Total Price</td>
+            <td class="dv">${currentAmt}</td>
+            <td class="dv" style="color:#ff6b00;">${proposedAmt}</td>
+          </tr>
+          <tr class="total-row">
+            <td class="total-label">Adjustment</td>
+            <td colspan="2" class="total-value" style="color: ${isRefund ? '#10b981' : '#ff6b00'}; text-align: right;">
+              ${diffText}
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      ${data.proposedDetails.notes ? `
+      <div class="card" style="border-color:#cbd5e1;">
+        <p class="card-title">Customer Special Requests</p>
+        <p style="font-size:14px;color:#475569;margin:0;line-height:1.6;">${data.proposedDetails.notes}</p>
+      </div>` : ""}
+
+      <div class="cta-wrap">
+        <a href="${APP_URL}/admin/bookings" class="btn" style="background:linear-gradient(135deg,#1e293b,#0f172a);">Open Admin Panel →</a>
+      </div>
+    </td></tr>`;
+
+  const text = `[StayVacation Admin Alert]
+BOOKING MODIFICATION REQUESTED
+
+Booking ID:  ${data.bookingId}
+Package:     ${data.packageName}
+Customer:    ${data.userName} (${data.userEmail})
+
+--- COMPARISON ---
+Travel Date: ${formatDate(data.currentDetails.travelDate)} -> ${formatDate(data.proposedDetails.travelDate)}
+Return Date: ${data.currentDetails.returnDate ? formatDate(data.currentDetails.returnDate) : "-"} -> ${data.proposedDetails.returnDate ? formatDate(data.proposedDetails.returnDate) : "-"}
+Travelers:   ${currentT} -> ${proposedT}
+Total Price: ${currentAmt} -> ${proposedAmt}
+Adjustment:  ${diffText}
+
+Special Requests: ${data.proposedDetails.notes || "None"}
+
+Manage bookings: ${APP_URL}/admin/bookings`;
+
+  return { subject, html: baseLayout(body, previewText), text };
+}
+
+export interface ModificationProcessedTemplateData {
+  bookingId: string;
+  packageName: string;
+  userName: string;
+  userEmail: string;
+  status: "approved" | "rejected";
+  adminNotes?: string;
+  details: {
+    travelDate: string;
+    returnDate?: string;
+    travellers: { adults: number; children: number };
+    totalAmount: number;
+  };
+  currency?: string;
+}
+
+export function bookingModificationProcessedTemplate(data: ModificationProcessedTemplateData) {
+  const isApproved = data.status === "approved";
+  const theme = getStatusTheme(isApproved ? "confirmed" : "cancelled");
+  const currency = data.currency || "INR";
+  const amount = formatCurrency(data.details.totalAmount, currency);
+  const travellers = formatTravellers(data.details.travellers);
+
+  const subject = isApproved 
+    ? `✅ Approved: Booking Modification for ${data.bookingId}` 
+    : `❌ Rejected: Booking Modification for ${data.bookingId}`;
+  const previewText = `Your booking modification request has been ${data.status.toUpperCase()}`;
+
+  const body = `
+    ${sharedHeader()}
+    <tr><td class="status-banner" style="background:${theme.bannerBg};">
+      <span class="status-icon">${isApproved ? "✓" : "✕"}</span>
+      <h1 class="status-title" style="color:${theme.bannerText};">Modification Request ${isApproved ? "Approved" : "Rejected"}</h1>
+      <p class="status-subtitle" style="color:${theme.bannerText};">Booking ID: ${data.bookingId}</p>
+    </td></tr>
+    <tr><td class="content">
+      <h2 class="greeting">Hi ${data.userName},</h2>
+      <p class="intro">
+        Your request to modify booking <strong>${data.bookingId}</strong> has been <strong>${data.status.toUpperCase()}</strong> by our administration team.
+      </p>
+
+      ${isApproved ? `
+      <div class="card" style="border-color:#10b981;background:#f0fdf4;">
+        <p style="margin:0;font-size:14px;color:#15803d;font-weight:600;text-align:center;">
+          The changes have been applied to your booking. Your updated itinerary details are shown below.
+        </p>
+      </div>
+      ` : `
+      <div class="card" style="border-color:#ef4444;background:#fef2f2;">
+        <p style="margin:0;font-size:14px;color:#b91c1c;font-weight:600;text-align:center;">
+          The requested changes could not be applied. Your booking remains active with its original details.
+        </p>
+      </div>
+      `}
+
+      ${data.adminNotes ? `
+      <div class="card" style="border-color:#cbd5e1;background:#fafafa;">
+        <p class="card-title" style="color:#64748b;">Admin Comments</p>
+        <p style="font-size:14px;color:#334155;margin:0;line-height:1.6;font-style:italic;">"${data.adminNotes}"</p>
+      </div>` : ""}
+
+      ${isApproved ? detailsCard({
+        bookingId: data.bookingId,
+        packageName: data.packageName,
+        travelDate: data.details.travelDate,
+        returnDate: data.details.returnDate,
+        travellers: data.details.travellers,
+        totalAmount: data.details.totalAmount,
+        currency: currency,
+        bookingStatus: "CONFIRMED",
+        userName: data.userName,
+        userEmail: data.userEmail
+      }, theme) : ""}
+
+      <div class="cta-wrap">
+        <a href="${APP_URL}/account/bookings" class="btn" style="background:${isApproved ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#64748b,#475569)'};">View My Booking →</a>
+      </div>
+    </td></tr>`;
+
+  const text = `Hi ${data.userName},
+
+Your request to modify booking ${data.bookingId} (${data.packageName}) has been ${data.status.toUpperCase()}.
+
+${isApproved ? `The changes have been applied.
+Updated Details:
+Travel Date:   ${formatDate(data.details.travelDate)}${data.details.returnDate ? `\nReturn Date:   ${formatDate(data.details.returnDate)}` : ""}
+Travelers:     ${travellers}
+Total Amount:  ${amount}` : `Your booking remains active with its original details.`}
+
+${data.adminNotes ? `Admin Notes: ${data.adminNotes}` : ""}
+
+View booking: ${APP_URL}/account/bookings`;
+
+  return { subject, html: baseLayout(body, previewText), text };
+}
+

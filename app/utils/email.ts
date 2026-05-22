@@ -6,8 +6,14 @@ import {
   bookingConfirmationTemplate,
   bookingStatusUpdateTemplate,
   adminBookingAlertTemplate,
+  bookingModificationRequestTemplate,
+  adminBookingModificationAlertTemplate,
+  bookingModificationProcessedTemplate,
   type BookingTemplateData,
   type AdminBookingAlertData,
+  type ModificationRequestTemplateData,
+  type AdminModificationAlertData,
+  type ModificationProcessedTemplateData,
 } from "./emailTemplates";
 
 // =============================================================================
@@ -152,7 +158,13 @@ function saveMockup(bookingId: string, html: string): void {
 // =============================================================================
 
 // Re-export types so consumers don't need to import from two places
-export type { BookingTemplateData, AdminBookingAlertData };
+export type {
+  BookingTemplateData,
+  AdminBookingAlertData,
+  ModificationRequestTemplateData,
+  AdminModificationAlertData,
+  ModificationProcessedTemplateData,
+};
 
 // ---------------------------------------------------------------------------
 // 1. Booking Confirmation  (new booking, payment successful)
@@ -233,4 +245,47 @@ export function sendEmailAsync(
   label = data.bookingId
 ): void {
   dispatchAsync(() => sendBookingEmail(data), label);
+}
+
+// ---------------------------------------------------------------------------
+// 4. Booking Modification Requested (Notify User)
+// ---------------------------------------------------------------------------
+export async function sendBookingModificationRequest(data: ModificationRequestTemplateData) {
+  const { subject, html, text } = bookingModificationRequestTemplate(data);
+  saveMockup(`${data.bookingId}-modification-requested`, html);
+  return MailService.send({ to: data.userEmail, subject, html, text });
+}
+
+export function sendBookingModificationRequestAsync(data: ModificationRequestTemplateData): void {
+  dispatchAsync(() => sendBookingModificationRequest(data), `${data.bookingId}-mod-requested`);
+}
+
+// ---------------------------------------------------------------------------
+// 5. Booking Modification Alert (Notify Admin)
+// ---------------------------------------------------------------------------
+export async function sendAdminBookingModificationAlert(data: AdminModificationAlertData) {
+  const adminEmail =
+    process.env.ADMIN_EMAIL ||
+    process.env.SMTP_USER ||
+    "admin@stayvacation.com";
+  const { subject, html, text } = adminBookingModificationAlertTemplate(data);
+  saveMockup(`${data.bookingId}-admin-modification-alert`, html);
+  return MailService.send({ to: adminEmail, subject, html, text });
+}
+
+export function sendAdminBookingModificationAlertAsync(data: AdminModificationAlertData): void {
+  dispatchAsync(() => sendAdminBookingModificationAlert(data), `${data.bookingId}-admin-mod-alert`);
+}
+
+// ---------------------------------------------------------------------------
+// 6. Booking Modification Processed (Notify User on Approve/Reject)
+// ---------------------------------------------------------------------------
+export async function sendBookingModificationProcessed(data: ModificationProcessedTemplateData) {
+  const { subject, html, text } = bookingModificationProcessedTemplate(data);
+  saveMockup(`${data.bookingId}-modification-processed-${data.status}`, html);
+  return MailService.send({ to: data.userEmail, subject, html, text });
+}
+
+export function sendBookingModificationProcessedAsync(data: ModificationProcessedTemplateData): void {
+  dispatchAsync(() => sendBookingModificationProcessed(data), `${data.bookingId}-mod-processed-${data.status}`);
 }

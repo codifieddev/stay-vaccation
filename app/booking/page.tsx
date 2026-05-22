@@ -6,6 +6,7 @@ import { useAppSelector } from "@/app/store/hooks";
 import { useCurrency } from "@/app/hooks/useCurrency";
 import LayoutV2 from "../layouts-v2/LayoutV2";
 import LucideIcon from "../components/LucideIcon";
+import Script from "next/script";
 
 function BookingFormContent() {
   const searchParams = useSearchParams();
@@ -35,6 +36,29 @@ function BookingFormContent() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBooking, setSuccessBooking] = useState<any | null>(null);
+  const [showMockModal, setShowMockModal] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState("");
+  const [livePkg, setLivePkg] = useState<any | null>(null);
+  const [loadingPkg, setLoadingPkg] = useState(true);
+
+  useEffect(() => {
+    async function fetchLivePackage() {
+      if (!packageId) return;
+      try {
+        setLoadingPkg(true);
+        const res = await fetch(`/api/packages?id=${packageId}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          setLivePkg(data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live package available seats:", err);
+      } finally {
+        setLoadingPkg(false);
+      }
+    }
+    fetchLivePackage();
+  }, [packageId]);
 
   // Auto-fill logged-in user details
   useEffect(() => {
@@ -51,20 +75,18 @@ function BookingFormContent() {
   const taxesAndFees = subtotal * 0.05; // 5% luxury tax
   const totalRaw = subtotal + taxesAndFees;
 
+  const liveMaxLimit = livePkg?.maxTravelersLimit;
+  const liveAvailable = livePkg?.availableSeats;
+  const isSoldOut = liveMaxLimit !== undefined && liveAvailable !== undefined && liveAvailable <= 0;
+  const totalOccupants = adults + children;
+  const isOverbooked = liveMaxLimit !== undefined && liveAvailable !== undefined && totalOccupants > liveAvailable;
+
   const isFormValid = name.trim() && email.trim() && phone.trim() && travelDate;
 
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (!name.trim()) return setErrorMsg("Full Name is required");
-    if (!email.trim()) return setErrorMsg("Email is required");
-    if (!phone.trim()) return setErrorMsg("Phone number is required");
-    if (!travelDate) return setErrorMsg("Travel date is required");
-
-    setSubmitting(true);
-
+  const handlePaymentSuccess = async (paymentId: string, orderId: string, signature: string) => {
     try {
+      setSubmitting(true);
+      setErrorMsg(null);
       const response = await fetch("/api/bookings/create", {
         method: "POST",
         headers: {
@@ -84,6 +106,10 @@ function BookingFormContent() {
           userPhone: phone,
           notes,
           currency: baseCurrency,
+          paymentId,
+          orderId,
+          signature,
+          paymentStatus: "paid",
         }),
       });
 
@@ -97,6 +123,144 @@ function BookingFormContent() {
       console.error(err);
       setErrorMsg("A network error occurred. Please check your connection.");
     } finally {
+      setSubmitting(false);
+      setShowMockModal(false);
+    }
+  };
+
+  const handlePaymentFailure = async (orderId: string, reason: "failed" | "cancelled", errorDetails?: any) => {
+    try {
+      setSubmitting(true);
+      setErrorMsg(null);
+      const response = await fetch("/api/bookings/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          packageId,
+          packageName,
+          totalAmount: totalRaw,
+          travelDate,
+          returnDate,
+          travellers: { adults, children },
+          adults,
+          children,
+          userName: name,
+          userEmail: email,
+          userPhone: phone,
+          notes,
+          currency: baseCurrency,
+          orderId,
+          paymentStatus: reason === "failed" ? "failed" : "pending",
+          bookingStatus: "pending",
+        }),
+      });
+
+      const resData = await response.json();
+      if (resData.success) {
+        setErrorMsg(`Payment ${reason === "failed" ? "failed" : "was cancelled"}. Booking (ID: ${resData.bookingId}) is saved as pending/unpaid. You can pay for it later under My Bookings.`);
+      } else {
+        setErrorMsg(resData.message || "Payment failed and booking could not be saved.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("A network error occurred. Booking could not be saved.");
+    } finally {
+      setSubmitting(false);
+      setShowMockModal(false);
+    }
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (isSoldOut) {
+      setErrorMsg("This package is sold out.");
+      return;
+    }
+    if (isOverbooked) {
+      setErrorMsg(`Only ${liveAvailable} seat(s) are available. You have selected ${totalOccupants} travellers.`);
+      return;
+    }
+
+    if (!name.trim()) return setErrorMsg("Full Name is required");
+    if (!email.trim()) return setErrorMsg("Email is required");
+    if (!phone.trim()) return setErrorMsg("Phone number is required");
+    if (!travelDate) return setErrorMsg("Travel date is required");
+
+    setSubmitting(true);
+
+    try {
+      const orderResponse = await fetch("/api/bookings/razorpay/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: totalRaw,
+          currency: baseCurrency,
+        }),
+      });
+
+      const orderData = await orderResponse.json();
+      if (!orderData.success) {
+        setErrorMsg(orderData.message || "Failed to initialize payment order.");
+        setSubmitting(false);
+        return;
+      }
+
+      const { orderId, amount, currency, mock, keyId } = orderData;
+      setCurrentOrderId(orderId);
+
+      if (mock) {
+        setShowMockModal(true);
+      } else {
+        if (!(window as any).Razorpay) {
+          setErrorMsg("Razorpay SDK failed to load. Please refresh the page and try again.");
+          setSubmitting(false);
+          return;
+        }
+
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: "StayVacation",
+          description: `Booking for ${packageName}`,
+          order_id: orderId,
+          handler: async function (response: any) {
+            await handlePaymentSuccess(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature
+            );
+          },
+          prefill: {
+            name: name,
+            email: email,
+            contact: phone,
+          },
+          theme: {
+            color: "#061217",
+          },
+          modal: {
+            ondismiss: async function () {
+              await handlePaymentFailure(orderId, "cancelled");
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", async function (resp: any) {
+          await handlePaymentFailure(orderId, "failed", resp.error);
+        });
+        rzp.open();
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("A network error occurred. Please check your connection.");
       setSubmitting(false);
     }
   };
@@ -187,10 +351,36 @@ function BookingFormContent() {
           <h1 className="font-['Poppins'] text-3xl md:text-5xl font-black text-[#1a3f4e] tracking-tight">
             Complete Your Booking
           </h1>
-          <p className="text-gray-500 text-sm font-medium mt-2 leading-relaxed">
+          <p className="text-gray-505 text-xs md:text-sm font-bold mt-2 leading-relaxed">
             Fill in your details below to reserve your luxury staycation.
           </p>
         </div>
+
+        {/* Sold Out Banner */}
+        {isSoldOut && (
+          <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-3xl flex items-center gap-4 shadow-sm animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-650 shrink-0">
+              <LucideIcon name="AlertOctagon" size={24} />
+            </div>
+            <div>
+              <h4 className="text-xs md:text-sm font-black text-red-800 uppercase tracking-wider">This Package is Sold Out</h4>
+              <p className="text-xs text-red-505 font-bold mt-0.5">Unfortunately, there are no remaining seats left. You cannot complete this booking.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Overbooked Banner */}
+        {!isSoldOut && isOverbooked && (
+          <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-3xl flex items-center gap-4 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-650 shrink-0">
+              <LucideIcon name="AlertTriangle" size={24} />
+            </div>
+            <div>
+              <h4 className="text-xs md:text-sm font-black text-amber-800 uppercase tracking-wider">Insufficient Seats Available</h4>
+              <p className="text-xs text-amber-600 font-bold mt-0.5">You requested {totalOccupants} seat(s) but only {liveAvailable} seat(s) are left. Please reduce the number of adults or children.</p>
+            </div>
+          </div>
+        )}
 
         {/* Split Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-10 items-start">
@@ -431,11 +621,11 @@ function BookingFormContent() {
                 <button
                   type="submit"
                   onClick={handleBookingSubmit}
-                  disabled={submitting || !isFormValid}
+                  disabled={submitting || !isFormValid || isSoldOut || isOverbooked}
                   className={`w-full py-4.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 shadow-xl ${
-                    submitting || !isFormValid
+                    submitting || !isFormValid || isSoldOut || isOverbooked
                       ? "bg-gray-200 text-gray-400 shadow-none cursor-not-allowed"
-                      : "bg-[#1a3f4e] hover:bg-[#1a3f4e]/90 text-white shadow-sky-950/10 hover:-translate-y-0.5 active:scale-[0.98]"
+                      : "bg-[#1a3f4e] hover:bg-[#1a3f4e]/90 text-white shadow-sky-955/10 hover:-translate-y-0.5 active:scale-[0.98]"
                   }`}
                 >
                   {submitting ? (
@@ -464,6 +654,68 @@ function BookingFormContent() {
         </div>
 
       </div>
+
+      {/* Mock Payment Simulation Modal */}
+      {showMockModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#061217]/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md bg-[#061217] rounded-[2rem] border border-gray-800 shadow-2xl p-8 text-center text-white overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 to-[#ff6b00]" />
+            
+            <div className="w-16 h-16 bg-[#ff6b00]/10 text-[#ff6b00] rounded-full flex items-center justify-center mx-auto mb-6 border border-[#ff6b00]/25">
+              <LucideIcon name="CreditCard" size={28} />
+            </div>
+
+            <h3 className="font-['Poppins'] font-black text-xl mb-2 tracking-tight">StayVacation Secure Pay</h3>
+            <p className="text-gray-400 text-xs mb-6 font-bold uppercase tracking-wider">Simulation Mode</p>
+
+            <div className="bg-[#0c1f28] rounded-2xl p-5 border border-gray-800/80 text-left mb-6 space-y-3.5 text-xs">
+              <div className="flex justify-between font-bold text-gray-400">
+                <span>Order ID:</span>
+                <span className="font-mono text-white">{currentOrderId}</span>
+              </div>
+              <div className="flex justify-between font-bold text-gray-400">
+                <span>Package:</span>
+                <span className="text-white truncate max-w-[180px]">{packageName}</span>
+              </div>
+              <div className="flex justify-between font-bold text-gray-400 pt-3 border-t border-gray-800">
+                <span>Amount:</span>
+                <span className="text-base font-black text-[#ff6b00]">{formatPrice(totalRaw, baseCurrency)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => handlePaymentSuccess(`pay_mock_${Math.random().toString(36).substring(2, 10)}`, currentOrderId, `sig_mock_${Math.random().toString(36).substring(2, 10)}`)}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-950/20 active:scale-[0.98] transition-all"
+              >
+                Simulate Successful Payment
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handlePaymentFailure(currentOrderId, "failed")}
+                className="w-full py-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-rose-950/20 active:scale-[0.98] transition-all"
+              >
+                Simulate Payment Failure
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePaymentFailure(currentOrderId, "cancelled")}
+                className="w-full py-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-2xl text-xs font-black uppercase tracking-wider active:scale-[0.98] transition-all"
+              >
+                Cancel & Pay Later
+              </button>
+            </div>
+
+            <p className="text-[9px] text-gray-500 mt-5 font-medium leading-normal">
+              This simulated gateway mimics official Razorpay triggers for test environments. No actual funds are processed.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -471,6 +723,7 @@ function BookingFormContent() {
 export default function BookingPage() {
   return (
     <LayoutV2>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <Suspense
         fallback={
           <div className="min-h-[60vh] flex items-center justify-center pt-20 bg-white">

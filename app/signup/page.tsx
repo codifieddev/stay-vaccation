@@ -218,9 +218,9 @@ function SignupForm() {
                 </div>
                 <span className="text-xs leading-relaxed font-semibold text-white/50 font-['Plus_Jakarta_Sans',sans-serif]">
                   I agree to the{" "}
-                  <Link href="/terms" className="text-sky-400 hover:text-sky-300 transition-colors">Terms of Service</Link>
+                  <Link href="/pages/terms-of-service" className="text-sky-400 hover:text-sky-300 transition-colors">Terms of Service</Link>
                   {" "}and{" "}
-                  <Link href="/privacy" className="text-sky-400 hover:text-sky-300 transition-colors">Privacy Policy</Link>
+                  <Link href="/pages/privacy-policy" className="text-sky-400 hover:text-sky-300 transition-colors">Privacy Policy</Link>
                 </span>
               </label>
 

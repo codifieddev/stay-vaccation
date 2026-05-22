@@ -264,9 +264,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
               <p className="text-xs text-white/40 leading-relaxed font-['Plus_Jakarta_Sans',sans-serif] pt-1">
                 By joining, you agree to the{" "}
-                <a href="/terms" className="underline text-white/60 hover:text-white transition-colors">Terms</a>
+                <a href="/pages/terms-of-service" className="underline text-white/60 hover:text-white transition-colors">Terms</a>
                 {" "}and{" "}
-                <a href="/privacy" className="underline text-white/60 hover:text-white transition-colors">Privacy Policy</a>.
+                <a href="/pages/privacy-policy" className="underline text-white/60 hover:text-white transition-colors">Privacy Policy</a>.
               </p>
 
               <button type="submit" disabled={loading}

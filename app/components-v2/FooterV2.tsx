@@ -26,8 +26,8 @@ const FooterV2 = () => {
             <ul>
               <li><Link href="/contact">Contact Us</Link></li>
               <li><Link href="/faq">FAQs</Link></li>
-              <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><Link href="/terms">Terms of Service</Link></li>
+              <li><Link href="/pages/privacy-policy">Privacy Policy</Link></li>
+              <li><Link href="/pages/terms-of-service">Terms of Service</Link></li>
             </ul>
           </div>
 
@@ -45,8 +45,8 @@ const FooterV2 = () => {
         <div className="footer-bottom" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem', marginTop: '3rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
           <p>© 2026 stayVacation. All rights reserved.</p>
           <div className="footer-bottom-links" style={{ display: 'flex', gap: '1.5rem' }}>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
+            <Link href="/pages/privacy-policy">Privacy</Link>
+            <Link href="/pages/terms-of-service">Terms</Link>
             <Link href="/sitemap">Sitemap</Link>
           </div>
         </div>

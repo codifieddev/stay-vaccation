@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/app/store/hooks";
 import { useCurrency } from "@/app/hooks/useCurrency";
-import LayoutV2 from "../layouts-v2/LayoutV2";
-import LucideIcon from "../components/LucideIcon";
+import LayoutV2 from "../../layouts-v2/LayoutV2";
+import LucideIcon from "../../components/LucideIcon";
 
 interface Booking {
   id: string;
@@ -16,8 +16,8 @@ interface Booking {
   packageTitle?: string;
   totalAmount: number;
   currency: string;
-  bookingStatus: "pending" | "confirmed" | "cancelled";
-  status: "pending" | "confirmed" | "cancelled";
+  bookingStatus: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   paymentStatus: "pending" | "paid" | "failed";
   bookingDate: string;
   travelDate: string;
@@ -32,7 +32,12 @@ interface Booking {
   userEmail: string;
   userPhone: string;
   notes?: string;
+  adminNotes?: string;
   createdAt?: string;
+  paymentId?: string;
+  orderId?: string;
+  signature?: string;
+  transactionDetails?: any;
 }
 
 export default function MyBookingsPage() {
@@ -43,40 +48,78 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "confirmed" | "cancelled">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   // Authentication Check Redirect
   useEffect(() => {
     if (authChecked && !user) {
-      router.push(`/login?from=${encodeURIComponent("/my-bookings")}`);
+      router.push(`/login?from=${encodeURIComponent("/account/bookings")}`);
     }
   }, [user, authChecked, router]);
 
-  // Fetch user bookings
+  const selectedBookingRef = React.useRef(selectedBooking);
+  useEffect(() => {
+    selectedBookingRef.current = selectedBooking;
+  }, [selectedBooking]);
+
+  const silentRefetchBookings = async (showLoading = false) => {
+    if (!user) return;
+    try {
+      if (showLoading) setLoading(true);
+      const res = await fetch("/api/bookings/my-bookings");
+      const json = await res.json();
+      if (json.success) {
+        const updatedList: Booking[] = json.data || [];
+        setBookings(updatedList);
+        setError(null);
+
+        // Update selectedBooking detail if currently open
+        const currentSelected = selectedBookingRef.current;
+        if (currentSelected) {
+          const fresh = updatedList.find((b) => b.id === currentSelected.id);
+          if (fresh && (fresh.bookingStatus !== currentSelected.bookingStatus || fresh.status !== currentSelected.status || fresh.paymentStatus !== currentSelected.paymentStatus)) {
+            setSelectedBooking(fresh);
+          }
+        }
+      } else if (showLoading) {
+        setError(json.message || "Failed to load bookings.");
+      }
+    } catch (err) {
+      console.error(err);
+      if (showLoading) {
+        setError("A network error occurred while fetching bookings.");
+      }
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  // Fetch user bookings initially
+  useEffect(() => {
+    if (!user) return;
+    silentRefetchBookings(true);
+  }, [user]);
+
+  // Setup short-polling (every 5 seconds) and focus listener for real-time status sync
   useEffect(() => {
     if (!user) return;
 
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/bookings/my-bookings");
-        const json = await res.json();
-        if (json.success) {
-          setBookings(json.data || []);
-        } else {
-          setError(json.message || "Failed to load bookings.");
-        }
-      } catch (err) {
-        console.error(err);
-        setError("A network error occurred while fetching bookings.");
-      } finally {
-        setLoading(false);
-      }
+    const interval = setInterval(() => {
+      silentRefetchBookings(false);
+    }, 5000);
+
+    const handleFocus = () => {
+      silentRefetchBookings(false);
     };
 
-    fetchBookings();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [user]);
 
   if (!authChecked || authLoading || (!user && !bookings.length)) {
@@ -107,6 +150,8 @@ export default function MyBookingsPage() {
     switch (status) {
       case "confirmed":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
+      case "completed":
+        return "bg-blue-50 text-blue-600 border-blue-100";
       case "cancelled":
         return "bg-rose-50 text-rose-600 border-rose-100";
       default:
@@ -160,7 +205,7 @@ export default function MyBookingsPage() {
 
           {/* Filter Tabs */}
           <div className="flex border-b border-gray-200/50 mb-8 overflow-x-auto pb-1 gap-2 scrollbar-none">
-            {(["all", "pending", "confirmed", "cancelled"] as const).map((tab) => {
+            {(["all", "pending", "confirmed", "completed", "cancelled"] as const).map((tab) => {
               const count = tab === "all" ? bookings.length : bookings.filter((b) => b.bookingStatus === tab).length;
               return (
                 <button
@@ -424,6 +469,190 @@ export default function MyBookingsPage() {
                 </div>
 
               </div>
+
+              {/* Booking Journey Timeline */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1.5">Booking Journey</h4>
+                
+                <div className="relative pl-6 space-y-6">
+                  {/* Vertical Line */}
+                  <div className="absolute left-[15px] top-2 bottom-2 w-[2px] bg-gray-200" />
+                  
+                  {/* Steps mapping */}
+                  {(() => {
+                    // Compute steps
+                    const createdDate = selectedBooking.createdAt || selectedBooking.bookingDate;
+                    const formattedCreatedDate = createdDate
+                      ? new Date(createdDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "";
+
+                    const isPaid = selectedBooking.paymentStatus === "paid";
+                    const isFailed = selectedBooking.paymentStatus === "failed";
+
+                    const isConfirmed = selectedBooking.bookingStatus === "confirmed" || selectedBooking.bookingStatus === "completed";
+                    const isCancelled = selectedBooking.bookingStatus === "cancelled";
+
+                    let isTripStarted = false;
+                    if (selectedBooking.bookingStatus === "completed") {
+                      isTripStarted = true;
+                    } else if (selectedBooking.bookingStatus === "confirmed" && selectedBooking.travelDate) {
+                      try {
+                        const tDate = new Date(selectedBooking.travelDate);
+                        const today = new Date();
+                        tDate.setHours(0, 0, 0, 0);
+                        today.setHours(0, 0, 0, 0);
+                        isTripStarted = today >= tDate;
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }
+                    const showTripStarted = isTripStarted && !isCancelled;
+
+                    const isTripCompleted = selectedBooking.bookingStatus === "completed" && !isCancelled;
+
+                    const steps = [
+                      {
+                        key: "created",
+                        title: "Booking Created",
+                        description: `Reservation initialized on ${formattedCreatedDate || "Date N/A"}`,
+                        status: "completed",
+                        icon: "Calendar",
+                        color: "text-emerald-500 bg-emerald-50 border-emerald-200"
+                      },
+                      {
+                        key: "payment",
+                        title: "Payment Completed",
+                        description: isPaid
+                          ? "Payment verified successfully"
+                          : isFailed
+                          ? "Payment attempt failed"
+                          : "Awaiting payment transaction",
+                        status: isPaid ? "completed" : isFailed ? "failed" : "pending",
+                        icon: isPaid ? "Check" : isFailed ? "X" : "CreditCard",
+                        color: isPaid
+                          ? "text-emerald-500 bg-emerald-50 border-emerald-200"
+                          : isFailed
+                          ? "text-rose-500 bg-rose-50 border-rose-200"
+                          : "text-amber-500 bg-amber-50 border-amber-200"
+                      },
+                      {
+                        key: "confirmed",
+                        title: isCancelled ? "Booking Cancelled" : "Booking Confirmed",
+                        description: isConfirmed
+                          ? "Reservation approved by StayVacation"
+                          : isCancelled
+                          ? "This booking has been cancelled"
+                          : "Awaiting confirmation check",
+                        status: isConfirmed ? "completed" : isCancelled ? "cancelled" : "pending",
+                        icon: isConfirmed ? "Check" : isCancelled ? "X" : "Clock",
+                        color: isConfirmed
+                          ? "text-emerald-500 bg-emerald-50 border-emerald-200"
+                          : isCancelled
+                          ? "text-rose-500 bg-rose-50 border-rose-200"
+                          : "text-gray-400 bg-gray-50 border-gray-200"
+                      },
+                      {
+                        key: "started",
+                        title: "Trip Started",
+                        description: showTripStarted
+                          ? "Your journey has commenced!"
+                          : isCancelled
+                          ? "Trip cancelled"
+                          : `Scheduled to start on ${selectedBooking.travelDate}`,
+                        status: showTripStarted ? "completed" : isCancelled ? "cancelled" : "pending",
+                        icon: "Compass",
+                        color: showTripStarted
+                          ? "text-emerald-500 bg-emerald-50 border-emerald-200"
+                          : isCancelled
+                          ? "text-gray-300 bg-gray-50 border-gray-100"
+                          : "text-gray-400 bg-gray-50 border-gray-200"
+                      },
+                      {
+                        key: "completed",
+                        title: "Trip Completed",
+                        description: isTripCompleted
+                          ? "Hope you enjoyed your staycation!"
+                          : isCancelled
+                          ? "Trip cancelled"
+                          : "Awaiting trip completion",
+                        status: isTripCompleted ? "completed" : isCancelled ? "cancelled" : "pending",
+                        icon: "MapPin",
+                        color: isTripCompleted
+                          ? "text-emerald-500 bg-emerald-50 border-emerald-200"
+                          : isCancelled
+                          ? "text-gray-300 bg-gray-50 border-gray-100"
+                          : "text-gray-400 bg-gray-50 border-gray-200"
+                      }
+                    ];
+
+                    return steps.map((step, index) => {
+                      const isStepCompleted = step.status === "completed";
+                      const isStepFailed = step.status === "failed";
+                      const isStepCancelled = step.status === "cancelled";
+                      const isStepPending = step.status === "pending";
+
+                      // Line coloring logic
+                      let lineClass = "bg-gray-200";
+                      if (index < steps.length - 1) {
+                        const nextStep = steps[index + 1];
+                        if (isStepCompleted && nextStep.status === "completed") {
+                          lineClass = "bg-emerald-500";
+                        } else if (isStepCompleted && nextStep.status === "pending") {
+                          lineClass = "bg-gradient-to-b from-emerald-500 to-gray-200";
+                        } else if (isStepCompleted && (nextStep.status === "failed" || nextStep.status === "cancelled")) {
+                          lineClass = "bg-gradient-to-b from-emerald-500 to-rose-500";
+                        } else if (isStepCancelled || isStepFailed) {
+                          lineClass = "bg-rose-200";
+                        }
+                      }
+
+                      return (
+                        <div key={step.key} className="relative flex gap-4 items-start group">
+                          {/* Colored connection line */}
+                          {index < steps.length - 1 && (
+                            <div className={`absolute left-[15px] top-8 bottom-[-24px] w-[2px] transition-all duration-300 ${lineClass}`} />
+                          )}
+
+                          {/* Node Icon */}
+                          <div className={`relative z-10 w-8 h-8 rounded-full border flex items-center justify-center font-bold text-sm transition-all duration-300 shrink-0 ${step.color} shadow-sm`}>
+                            <LucideIcon name={step.icon} size={14} />
+                          </div>
+
+                          {/* Text info */}
+                          <div className="space-y-0.5 pt-0.5">
+                            <span className={`text-xs font-black uppercase tracking-wider block transition-colors duration-300 ${
+                              isStepCompleted
+                                ? "text-[#1a3f4e]"
+                                : isStepCancelled || isStepFailed
+                                ? "text-rose-500"
+                                : "text-gray-400"
+                            }`}>
+                              {step.title}
+                            </span>
+                            <span className="text-[11px] font-bold text-gray-400 block leading-none">
+                              {step.description}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Admin Notes */}
+              {selectedBooking.adminNotes && (
+                <div className="space-y-2.5">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1.5">Note from Host</h4>
+                  <p className="bg-[#f0f9ff] rounded-xl p-4 text-xs font-bold text-[#1e3a8a] border border-[#dbeafe] leading-relaxed italic">
+                    "{selectedBooking.adminNotes}"
+                  </p>
+                </div>
+              )}
 
               {/* Special Request Note */}
               {selectedBooking.notes && (

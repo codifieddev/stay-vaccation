@@ -20,10 +20,12 @@ export const fetchBookings = createAsyncThunk(
 export const updateBooking = createAsyncThunk(
   "bookings/updateBooking",
   async (booking: Booking) => {
-    return apiFetch<Booking>("/api/bookings", {
+    const res = await apiFetch<{ success: boolean; data?: Booking }>("/api/bookings", {
       method: "PUT",
       body: JSON.stringify(booking),
     });
+    // Support either backend returning data or fallback to the input booking
+    return (res as any).data || booking;
   }
 );
 

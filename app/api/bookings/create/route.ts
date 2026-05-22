@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "@/app/utils/getDatabase";
 import jwt from "jsonwebtoken";
+import { sendBookingEmail, sendEmailAsync, sendAdminBookingAlertAsync } from "@/app/utils/email";
+import { ObjectId } from "mongodb";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +49,63 @@ export async function POST(req: NextRequest) {
       children: Number(body.children || body.travellers?.children || 0),
     };
 
-    const bookingStatus = body.bookingStatus || body.status || "pending";
-    const paymentStatus = body.paymentStatus || "pending";
+    // Fetch package to verify availability
+    const packageId = body.packageId || "";
+    let pkgObj = null;
+    if (packageId) {
+      const pkgCol = db.collection("packages");
+      if (ObjectId.isValid(packageId)) {
+        pkgObj = await pkgCol.findOne({ _id: new ObjectId(packageId) });
+      } else {
+        pkgObj = await pkgCol.findOne({ id: packageId });
+      }
+    }
+
+    const requestedSeats = travellers.adults + travellers.children;
+
+    if (pkgObj && pkgObj.maxTravelersLimit !== undefined && pkgObj.maxTravelersLimit !== null) {
+      const available = pkgObj.availableSeats !== undefined && pkgObj.availableSeats !== null ? pkgObj.availableSeats : pkgObj.maxTravelersLimit;
+      if (requestedSeats > available) {
+        return NextResponse.json(
+          { success: false, message: `Not enough seats available. Only ${available} seat(s) left.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const paymentId = body.paymentId || body.razorpay_payment_id || "";
+    const orderId = body.orderId || body.razorpay_order_id || "";
+    const signature = body.signature || body.razorpay_signature || "";
+
+    let isPaid = false;
+
+    if (paymentId && orderId) {
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (keySecret) {
+        // Live signature verification
+        try {
+          const crypto = require("crypto");
+          const expectedSignature = crypto
+            .createHmac("sha256", keySecret)
+            .update(orderId + "|" + paymentId)
+            .digest("hex");
+          if (expectedSignature === signature) {
+            isPaid = true;
+          } else {
+            console.error("[Razorpay Verification] Signature mismatch!");
+          }
+        } catch (verifErr) {
+          console.error("[Razorpay Verification] Verification failed:", verifErr);
+        }
+      } else {
+        // Mock verification
+        console.log("[Razorpay Verification] Mock mode. Auto-verifying signature.");
+        isPaid = true;
+      }
+    }
+
+    const bookingStatus = isPaid ? "confirmed" : "pending";
+    const paymentStatus = isPaid ? "paid" : (body.paymentStatus || "pending");
     const bookingDate = new Date();
 
     const insertData = {
@@ -71,6 +128,10 @@ export async function POST(req: NextRequest) {
       userPhone: body.userPhone || "",
       notes: body.notes || body.message || "",
       currency: body.currency || "INR",
+      paymentId: paymentId || undefined,
+      orderId: orderId || undefined,
+      signature: signature || undefined,
+      transactionDetails: paymentId ? { paymentId, orderId, signature, verified: isPaid } : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -115,19 +176,60 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        insertedId, 
+    if (bookingStatus === "confirmed" && pkgObj && pkgObj.maxTravelersLimit !== undefined && pkgObj.maxTravelersLimit !== null) {
+      await db.collection("packages").updateOne(
+        { _id: pkgObj._id },
+        { $inc: { availableSeats: -requestedSeats } }
+      );
+      console.log(`[Inventory System] Booking confirmed on creation. Reduced availableSeats by ${requestedSeats} for package ${pkgObj._id}.`);
+    }
+
+    // Build the response first — email runs asynchronously and never delays the API
+    const responsePayload = NextResponse.json(
+      {
+        success: true,
+        insertedId,
         bookingId,
-        data: {
-          ...insertData,
-          id: insertedId,
-          bookingId,
-        }
+        data: { ...insertData, id: insertedId, bookingId },
       },
       { status: 201 }
     );
+
+    // User-facing email: fire-and-forget for all relevant statuses
+    const notifyStatuses = ["confirmed", "pending", "cancelled", "completed"];
+    if (notifyStatuses.includes(bookingStatus)) {
+      sendEmailAsync({
+        bookingId,
+        packageName: insertData.packageName,
+        travelDate: insertData.travelDate,
+        returnDate: insertData.returnDate,
+        travellers: insertData.travellers,
+        totalAmount: insertData.totalAmount,
+        currency: insertData.currency,
+        bookingStatus: insertData.bookingStatus,
+        userEmail: insertData.userEmail,
+        userName: insertData.userName || "Valued Customer",
+      });
+    }
+
+    // Admin alert: always notify admin on new booking creation
+    sendAdminBookingAlertAsync({
+      bookingId,
+      packageName: insertData.packageName,
+      travelDate: insertData.travelDate,
+      returnDate: insertData.returnDate,
+      travellers: insertData.travellers,
+      totalAmount: insertData.totalAmount,
+      currency: insertData.currency,
+      bookingStatus: insertData.bookingStatus,
+      userEmail: insertData.userEmail,
+      userName: insertData.userName || "Valued Customer",
+      userPhone: insertData.userPhone,
+      notes: insertData.notes,
+      eventType: "new_booking",
+    });
+
+    return responsePayload;
   } catch (err) {
     console.error("BOOKINGS CREATE POST ERROR:", err);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });

@@ -188,7 +188,7 @@ export default function NavbarV2() {
                                 Admin Panel
                               </Link>
                             )}
-                            <Link href="/my-bookings" onClick={() => setUserMenuOpen(false)}
+                            <Link href="/account/bookings" onClick={() => setUserMenuOpen(false)}
                               className="flex items-center gap-3.5 px-4 py-3.5 text-[0.75rem] font-bold uppercase tracking-widest text-[#1a1a2e]/70 hover:bg-gray-50 hover:text-[#ff9500] rounded-2xl transition-all">
                               <LucideIcon name="Calendar" size={15} />
                               My Bookings
@@ -280,10 +280,10 @@ export default function NavbarV2() {
               })}
               {user && (
                 <Link
-                  href="/my-bookings"
+                  href="/account/bookings"
                   onClick={() => setMobileOpen(false)}
                   className={`text-2xl font-[900] tracking-tight transition-all duration-300 ${
-                    pathname === "/my-bookings" ? "text-[#ff9500] scale-110" : "text-[#1a1a2e] hover:text-[#ff9500]"
+                    pathname === "/account/bookings" ? "text-[#ff9500] scale-110" : "text-[#1a1a2e] hover:text-[#ff9500]"
                   }`}
                 >
                   My Bookings

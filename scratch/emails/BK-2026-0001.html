@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmation - StayVacation</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #f3f4f6;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e5e7eb;
+    }
+    .header {
+      background-color: #061217;
+      padding: 30px;
+      text-align: center;
+      border-bottom: 4px solid #ff6b00;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      text-decoration: none;
+    }
+    .logo span {
+      color: #ff9500;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+    .intro {
+      font-size: 16px;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+    .receipt-card {
+      background-color: #fafafa;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+    .receipt-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .detail-table td {
+      padding: 8px 0;
+      font-size: 15px;
+      vertical-align: top;
+    }
+    .detail-label {
+      color: #6b7280;
+      width: 40%;
+      font-weight: 500;
+    }
+    .detail-value {
+      color: #111827;
+      font-weight: 600;
+      text-align: right;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .total-row td {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 14px;
+      font-size: 18px;
+    }
+    .total-label {
+      color: #111827;
+      font-weight: 700;
+    }
+    .total-value {
+      color: #ff6b00;
+      font-weight: 800;
+      font-size: 20px;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #ff6b00;
+      color: #ffffff !important;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 12px 30px;
+      text-decoration: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(255, 107, 0, 0.2);
+      transition: background-color 0.2s;
+    }
+    .footer {
+      background-color: #061217;
+      padding: 30px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #ff9500;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <a href="#" class="logo">Stay<span>Vacation</span></a>
+      </div>
+      
+      <div class="content">
+        <h1 class="greeting">Hi lakshit ajmera,</h1>
+        <p class="intro">Thank you for booking your vacation with us! Your booking request has been confirmed. Below are the details of your itinerary.</p>
+        
+        <div class="receipt-card">
+          <h2 class="receipt-title">Booking Details</h2>
+          <table class="detail-table">
+            <tr>
+              <td class="detail-label">Booking ID</td>
+              <td class="detail-value" style="font-family: monospace; font-size: 16px;">BK-2026-0001</td>
+            </tr>
+            <tr>
+              <td class="detail-label">Package Name</td>
+              <td class="detail-value">Bali Royal Escape</td>
+            </tr>
+            <tr>
+              <td class="detail-label">Travel Date</td>
+              <td class="detail-value">May 22, 2026</td>
+            </tr>
+            
+            <tr>
+              <td class="detail-label">Return Date</td>
+              <td class="detail-value">May 31, 2026</td>
+            </tr>
+            
+            <tr>
+              <td class="detail-label">Travelers</td>
+              <td class="detail-value">1 (1 Adult)</td>
+            </tr>
+            <tr>
+              <td class="detail-label">Booking Status</td>
+              <td class="detail-value">
+                <span class="status-badge" style="background-color: #ecfdf5; color: #047857;">confirmed</span>
+              </td>
+            </tr>
+            <tr class="total-row">
+              <td class="total-label" style="text-align: left;">Total Paid/Due</td>
+              <td class="total-value">₹7,03,500</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p style="font-size: 14px; color: #6b7280; line-height: 1.5;">
+          You can track your booking status or request modifications at any time by visiting the "My Bookings" page in your account dashboard.
+        </p>
+        
+        <div class="btn-container">
+          <a href="http://localhost:3000/account/bookings" class="btn">View My Bookings</a>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <p>&copy; 2026 StayVacation. All rights reserved.</p>
+        <p>If you have any questions, feel free to reply to this email or contact support.</p>
+        <p>
+          <a href="http://localhost:3000/pages/terms-of-service">Terms of Service</a> | 
+          <a href="http://localhost:3000/pages/privacy-policy">Privacy Policy</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  

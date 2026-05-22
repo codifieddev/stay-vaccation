@@ -51,12 +51,17 @@ export async function POST(req: NextRequest) {
       transfers: day.transfers?.map((t: any) => ({ ...t })) || [],
     }));
 
+    const maxTravelersLimit = body.maxTravelersLimit !== undefined && body.maxTravelersLimit !== null ? Number(body.maxTravelersLimit) : undefined;
+    const availableSeats = body.availableSeats !== undefined && body.availableSeats !== null ? Number(body.availableSeats) : maxTravelersLimit;
+
     const result = await collection.insertOne({
       ...body,
       id: newPackageId,
       destinationId: safeObjectId(body.destinationId),
       categoryId: safeObjectId(body.categoryId),
       itinerary: cleanedItinerary,
+      maxTravelersLimit,
+      availableSeats,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -280,6 +285,22 @@ export async function PUT(req: NextRequest) {
       })) || [],
     }));
 
+    const oldPkg = await collection.findOne({ _id: new ObjectId(id) });
+    const maxTravelersLimit = body.maxTravelersLimit !== undefined && body.maxTravelersLimit !== null ? Number(body.maxTravelersLimit) : undefined;
+    let availableSeats = body.availableSeats !== undefined && body.availableSeats !== null ? Number(body.availableSeats) : undefined;
+
+    if (maxTravelersLimit !== undefined) {
+      if (availableSeats === undefined) {
+        if (oldPkg && (oldPkg.availableSeats === undefined || oldPkg.availableSeats === null)) {
+          availableSeats = maxTravelersLimit;
+        } else if (oldPkg) {
+          availableSeats = oldPkg.availableSeats;
+        } else {
+          availableSeats = maxTravelersLimit;
+        }
+      }
+    }
+
     await collection.updateOne(
       { _id: new ObjectId(id) },
       {
@@ -288,6 +309,8 @@ export async function PUT(req: NextRequest) {
           destinationId: safeObjectId(body.destinationId),
           categoryId: safeObjectId(body.categoryId),
           itinerary: cleanedItinerary,
+          maxTravelersLimit,
+          availableSeats,
           updatedAt: new Date(),
         },
       }

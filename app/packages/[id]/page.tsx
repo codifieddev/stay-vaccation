@@ -244,6 +244,12 @@ export default function SinglePackagePage() {
   const savings = hasDiscount ? formatPrice(savingsValue, "INR") : null;
   const days = pkg.tripDuration?.match(/^(\d+)/)?.[1] || "—";
   const nights = pkg.tripDuration?.match(/(\d+)\s*Night/i)?.[1] || String(Number(days) - 1);
+
+  const maxTravelersLimit = pkg.maxTravelersLimit;
+  const availableSeats = pkg.availableSeats;
+  const isSoldOut = maxTravelersLimit !== undefined && availableSeats !== undefined && availableSeats <= 0;
+  const isLowSeats = maxTravelersLimit !== undefined && availableSeats !== undefined && availableSeats > 0 && availableSeats <= 5;
+
   const getBookingUrl = () => {
     const searchParamsObj = new URLSearchParams({
       packageId: matchedId,
@@ -272,6 +278,13 @@ export default function SinglePackagePage() {
               <div className="w-full">
                 {pkg.images && pkg.images.length >= 5 ? (
                   <div className="relative group cursor-pointer" onClick={() => setLightboxIdx(0)}>
+                    {isSoldOut && (
+                      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] rounded-[2.5rem] flex items-center justify-center z-25">
+                        <span className="text-white text-base md:text-lg font-black uppercase tracking-widest border-4 border-white px-6 py-3 rounded-2xl rotate-12 shadow-2xl">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-4 grid-rows-2 gap-3.5 aspect-[16/9] lg:aspect-[16/10] rounded-[2.5rem] overflow-hidden shadow-xl transition-all duration-500 hover:shadow-2xl border border-gray-100/30">
                       <div className="col-span-2 row-span-2 relative overflow-hidden">
                         <Image src={pkg.images[0]} alt={`${pkg.title} 1`} fill className="object-cover transition-transform duration-1000 group-hover:scale-105" priority sizes="(max-w-lg) 100vw, 800px" />
@@ -295,9 +308,25 @@ export default function SinglePackagePage() {
                     </button>
                   </div>
                 ) : pkg.images && pkg.images.length > 1 ? (
-                  <HeroSlider images={pkg.images} title={pkg.title} />
+                  <div className="relative w-full aspect-[4/3] lg:aspect-square">
+                    {isSoldOut && (
+                      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] rounded-[2rem] flex items-center justify-center z-25">
+                        <span className="text-white text-base md:text-lg font-black uppercase tracking-widest border-4 border-white px-6 py-3 rounded-2xl rotate-12 shadow-2xl">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+                    <HeroSlider images={pkg.images} title={pkg.title} />
+                  </div>
                 ) : (
                   <div className="relative w-full aspect-[16/10] rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-150">
+                    {isSoldOut && (
+                      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] rounded-[2.5rem] flex items-center justify-center z-25">
+                        <span className="text-white text-base md:text-lg font-black uppercase tracking-widest border-4 border-white px-6 py-3 rounded-2xl rotate-12 shadow-2xl">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
                     <Image src={pkg.coverImage || pkg.images?.[0] || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800"} alt={pkg.title} fill className="object-cover" />
                   </div>
                 )}
@@ -708,6 +737,18 @@ export default function SinglePackagePage() {
 
                 {/* Form Section */}
                 <div id="enquiry-form" className="p-8">
+                  {isSoldOut && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-center shadow-sm">
+                      <span className="text-red-600 font-extrabold text-xs tracking-widest uppercase block animate-pulse">🛑 Sold Out</span>
+                      <p className="text-[10px] text-gray-505 font-bold mt-1 leading-normal">All available seats have been fully booked for this experience.</p>
+                    </div>
+                  )}
+                  {isLowSeats && (
+                    <div className="mb-6 p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-center shadow-sm">
+                      <span className="text-amber-700 font-extrabold text-xs tracking-widest uppercase block">🔥 Only {availableSeats} spots left!</span>
+                      <p className="text-[10px] text-gray-505 font-bold mt-1 leading-normal">Book now to secure your travel dates before it sells out.</p>
+                    </div>
+                  )}
                   <h3 className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">Secure Your Experience</h3>
                   
                   {sent ? (
@@ -784,12 +825,22 @@ export default function SinglePackagePage() {
                         </div>
                       </div>
 
-                      <Link 
-                        href={getBookingUrl()}
-                        className="w-full py-4.5 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-[0_6px_20px_rgba(255,149,0,0.2)] hover:shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-[#ff9500] to-[#ff6b00]"
-                      >
-                        {user ? "Book Your Spot" : "Sign In to Book"}
-                      </Link>
+                      {isSoldOut ? (
+                        <button 
+                          disabled
+                          type="button"
+                          className="w-full py-4.5 text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl bg-gray-200 cursor-not-allowed flex items-center justify-center gap-3 border border-gray-300"
+                        >
+                          Sold Out
+                        </button>
+                      ) : (
+                        <Link 
+                          href={getBookingUrl()}
+                          className="w-full py-4.5 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-[0_6px_20px_rgba(255,149,0,0.2)] hover:shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-[#ff9500] to-[#ff6b00]"
+                        >
+                          {user ? "Book Your Spot" : "Sign In to Book"}
+                        </Link>
+                      )}
                     </form>
                   )}
                 </div>

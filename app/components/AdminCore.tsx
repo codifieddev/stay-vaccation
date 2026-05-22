@@ -148,8 +148,10 @@ export interface Booking {
   children: number;
   totalPrice: number;
   currency: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  bookingStatus?: "pending" | "confirmed" | "cancelled" | "completed";
   notes: string;
+  adminNotes?: string;
   createdAt: string;
 }
 
@@ -2350,6 +2352,36 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
           <div className="col-span-2"><FL>Short Description</FL><Inp placeholder="1-line teaser for listing cards" value={form.shortDescription || ""} onChange={e => upd("shortDescription", e.target.value)} /></div>
           <div className="col-span-2"><FL optional>Summary Tags (Comma separated)</FL><Inp placeholder="e.g. Best Seller, New, Romantic" value={form.summary?.tags?.join(", ") || ""} onChange={e => upd("summary", { ...form.summary, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })} /></div>
           <div><FL optional>Rating (1-5)</FL><Inp type="number" min="1" max="5" step="0.1" placeholder="e.g. 4.8" value={form.rating || ""} onChange={e => upd("rating", parseFloat(e.target.value))} /></div>
+          <div>
+            <FL optional>Max Travelers Limit</FL>
+            <Inp
+              type="number"
+              placeholder="e.g. 20"
+              value={form.maxTravelersLimit ?? ""}
+              onChange={e => {
+                const val = e.target.value === "" ? undefined : parseInt(e.target.value);
+                setForm(p => {
+                  const newPkg = { ...p, maxTravelersLimit: val };
+                  if (val !== undefined && (p.availableSeats === undefined || p.availableSeats === null)) {
+                    newPkg.availableSeats = val;
+                  }
+                  return newPkg;
+                });
+              }}
+            />
+          </div>
+          <div>
+            <FL optional>Available Seats</FL>
+            <Inp
+              type="number"
+              placeholder="e.g. 20"
+              value={form.availableSeats ?? ""}
+              onChange={e => {
+                const val = e.target.value === "" ? undefined : parseInt(e.target.value);
+                upd("availableSeats", val);
+              }}
+            />
+          </div>
           <div className="col-span-2"><FL optional>Highlights (Comma separated)</FL><TA placeholder="Key highlights of this package..." value={form.highlights?.join(",\n") || ""} onChange={e => upd("highlights", e.target.value.split(",").map(t => t.trim()).filter(Boolean))} rows={3} /></div>
         </div>
       </Card>

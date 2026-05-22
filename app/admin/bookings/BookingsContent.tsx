@@ -12,10 +12,90 @@ export default function BookingsContent() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<Booking | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [localAdminNotes, setLocalAdminNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     dispatch(fetchBookings());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (selected) {
+      setLocalAdminNotes(selected.adminNotes || "");
+    } else {
+      setLocalAdminNotes("");
+    }
+  }, [selected]);
+
+  const handleSaveAdminNotes = async () => {
+    if (!selected) return;
+    setSavingNotes(true);
+    const updated = {
+      ...selected,
+      adminNotes: localAdminNotes
+    };
+    const result = await dispatch(updateBooking(updated));
+    setSavingNotes(false);
+    if (updateBooking.fulfilled.match(result)) {
+      setSelected(updated);
+      alert("Admin notes saved successfully!");
+    } else {
+      alert("Failed to save admin notes.");
+    }
+  };
+
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      alert("No bookings to export.");
+      return;
+    }
+    const headers = [
+      "Booking ID",
+      "Customer Name",
+      "Customer Email",
+      "Customer Phone",
+      "Package Name",
+      "Travel Date",
+      "Return Date",
+      "Adults",
+      "Children",
+      "Status",
+      "Amount",
+      "Currency",
+      "Admin Notes",
+      "Guest Notes"
+    ];
+    const rows = filtered.map(b => [
+      b.bookingId || "N/A",
+      b.userName || "",
+      b.userEmail || "",
+      b.userPhone || "",
+      b.packageName || b.packageTitle || "N/A",
+      b.travelDate || "",
+      b.returnDate || "",
+      b.travellers?.adults ?? b.adults ?? 0,
+      b.travellers?.children ?? b.children ?? 0,
+      b.bookingStatus || b.status || "",
+      b.totalAmount || 0,
+      b.currency || "INR",
+      b.adminNotes || "",
+      b.notes || ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bookings_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleStatusChange = async (booking: Booking, newStatus: string) => {
     const updated = {
@@ -59,12 +139,19 @@ export default function BookingsContent() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></div>
-          <Inp className="pl-9" placeholder="Search bookings…" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-sm">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Ic.Search /></div>
+            <Inp className="pl-9" placeholder="Search bookings…" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="w-48">
+            <Sel value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={["all", "pending", "confirmed", "completed", "cancelled"]} placeholder="Filter Status" />
+          </div>
         </div>
-        <Sel value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={["all", "pending", "confirmed", "cancelled"]} placeholder="Filter Status" />
+        <Btn variant="outline" onClick={handleExport} className="h-10 text-xs flex items-center gap-1.5">
+          <Ic.Document className="w-3.5 h-3.5" /> Export CSV
+        </Btn>
       </div>
 
       <Card>
@@ -102,6 +189,7 @@ export default function BookingsContent() {
                   <td className="px-4 py-3.5">
                     <Badge className={
                       (b.bookingStatus || b.status) === "confirmed" ? "bg-emerald-100 text-emerald-800" :
+                      (b.bookingStatus || b.status) === "completed" ? "bg-blue-100 text-blue-800" :
                       (b.bookingStatus || b.status) === "pending" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
                     }>
                       {b.bookingStatus || b.status}
@@ -134,6 +222,7 @@ export default function BookingsContent() {
               </div>
               <Badge className={
                 (selected.bookingStatus || selected.status) === "confirmed" ? "bg-emerald-100 text-emerald-800 text-sm py-1 px-3 border-emerald-200" :
+                (selected.bookingStatus || selected.status) === "completed" ? "bg-blue-100 text-blue-800 text-sm py-1 px-3 border-blue-200" :
                 (selected.bookingStatus || selected.status) === "pending" ? "bg-amber-100 text-amber-800 text-sm py-1 px-3 border-amber-200" : "bg-red-100 text-red-800 text-sm py-1 px-3 border-red-200"
               }>{selected.bookingStatus || selected.status}</Badge>
             </div>
@@ -173,6 +262,48 @@ export default function BookingsContent() {
                 <p className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm italic text-gray-600 mt-2">&ldquo;{selected.notes}&rdquo;</p>
               </section>
             )}
+
+            {/* Quick Actions Section */}
+            <section className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Quick Actions</label>
+              <div className="flex flex-wrap gap-2">
+                {(selected.bookingStatus || selected.status) !== "confirmed" && (
+                  <Btn variant="success" size="sm" onClick={() => handleStatusChange(selected, "confirmed")}>
+                    Confirm Booking
+                  </Btn>
+                )}
+                {(selected.bookingStatus || selected.status) !== "completed" && (
+                  <Btn variant="primary" size="sm" onClick={() => handleStatusChange(selected, "completed")}>
+                    Mark Completed
+                  </Btn>
+                )}
+                {(selected.bookingStatus || selected.status) !== "cancelled" && (
+                  <Btn variant="danger" size="sm" onClick={() => handleStatusChange(selected, "cancelled")}>
+                    Cancel Booking
+                  </Btn>
+                )}
+              </div>
+            </section>
+
+            {/* Admin Notes Section */}
+            <section className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Admin Notes</label>
+              <div className="space-y-2">
+                <textarea
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-200/80 rounded-xl bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-[#4a90e2] transition-all duration-300 resize-none shadow-[inset_0_1px_2px_rgba(74,144,226,0.01)]"
+                  rows={3}
+                  placeholder="Add private admin notes about this booking..."
+                  value={localAdminNotes}
+                  onChange={(e) => setLocalAdminNotes(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Btn variant="soft" size="sm" onClick={handleSaveAdminNotes} disabled={savingNotes}>
+                    {savingNotes ? "Saving..." : "Save Notes"}
+                  </Btn>
+                </div>
+              </div>
+            </section>
+
             <div className="pt-6 border-t flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-400 uppercase">Change Status:</span>
@@ -183,6 +314,7 @@ export default function BookingsContent() {
                     options={[
                       { label: "Pending", value: "pending" },
                       { label: "Confirmed", value: "confirmed" },
+                      { label: "Completed", value: "completed" },
                       { label: "Cancelled", value: "cancelled" }
                     ]}
                   />

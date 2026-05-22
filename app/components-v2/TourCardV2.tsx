@@ -20,6 +20,8 @@ interface TourCardV2Props {
     duration?: string;
     tripDuration?: string;
     maxPeople?: number;
+    maxTravelersLimit?: number;
+    availableSeats?: number;
     price?: any;
     badge?: string;
     slug?: string;
@@ -51,6 +53,8 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
   const location = pkg.destination || 'Global';
   const shortDesc = pkg.shortDescription || 'Embark on an unforgettable journey to discover gorgeous landscapes, vibrant cultures, and hidden treasures.';
 
+  const isSoldOut = pkg.maxTravelersLimit !== undefined && pkg.availableSeats !== undefined && pkg.availableSeats <= 0;
+
   return (
     <article 
       className="group bg-white rounded-[1.8rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-sky-500/5 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full relative reveal visible" 
@@ -72,12 +76,24 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
         {/* Dark Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
         
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <span className="text-white text-xs font-black uppercase tracking-widest border-2 border-white px-3 py-1 rounded rotate-12">
+              Sold Out
+            </span>
+          </div>
+        )}
+
         {/* Badge in Top Left */}
-        {pkg.badge && (
+        {isSoldOut ? (
+          <div className="absolute top-4 left-4 bg-red-600 text-white text-[9px] font-black tracking-widest px-3 py-1.5 rounded-full shadow-lg uppercase z-10">
+            Sold Out
+          </div>
+        ) : pkg.badge ? (
           <div className="absolute top-4 left-4 bg-orange-500 text-white text-[9px] font-black tracking-widest px-3 py-1.5 rounded-full shadow-lg uppercase">
             {pkg.badge}
           </div>
-        )}
+        ) : null}
 
         {/* Category in Top Right */}
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md text-[#1a3f4e] text-[9px] font-extrabold px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider">
@@ -141,16 +157,25 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
           </div>
 
           {/* Book Now Button */}
-          <Link 
-            href={
-              user 
-                ? `/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`
-                : `/login?from=${encodeURIComponent(`/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`)}`
-            } 
-            className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(255,149,0,0.15)] hover:shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:-translate-y-0.5"
-          >
-            Book Now
-          </Link>
+          {isSoldOut ? (
+            <button 
+              disabled
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-gray-300 text-gray-500 text-xs font-black uppercase tracking-wider rounded-xl cursor-not-allowed"
+            >
+              Sold Out
+            </button>
+          ) : (
+            <Link 
+              href={
+                user 
+                  ? `/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`
+                  : `/login?from=${encodeURIComponent(`/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`)}`
+              } 
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(255,149,0,0.15)] hover:shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:-translate-y-0.5"
+            >
+              Book Now
+            </Link>
+          )}
         </div>
       </div>
     </article>

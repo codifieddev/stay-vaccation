@@ -7,8 +7,8 @@ export interface Booking {
   packageTitle?: string;
   totalAmount: number;
   currency: string;
-  bookingStatus: "pending" | "confirmed" | "cancelled";
-  status: "pending" | "confirmed" | "cancelled";
+  bookingStatus: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   paymentStatus: "pending" | "paid" | "failed";
   bookingDate: string;
   travelDate: string;
@@ -23,6 +23,11 @@ export interface Booking {
   userEmail: string;
   userPhone: string;
   notes?: string;
+  adminNotes?: string;
+  paymentId?: string;
+  orderId?: string;
+  signature?: string;
+  transactionDetails?: any;
 }
 
 export interface BookingsState {

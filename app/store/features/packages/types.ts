@@ -159,6 +159,7 @@ export interface Package {
   images?: string[];
   maxTravelersLimit?: number;
   availableSeats?: number;
+  displayOrder?: number;
   createdAt?: string;
   updatedAt?: string;
 }

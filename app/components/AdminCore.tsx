@@ -2382,6 +2382,18 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
               }}
             />
           </div>
+          <div>
+            <FL optional>Display Order</FL>
+            <Inp
+              type="number"
+              placeholder="e.g. 1 (show first), 2, 3..."
+              value={form.displayOrder ?? ""}
+              onChange={e => {
+                const val = e.target.value === "" ? undefined : parseInt(e.target.value);
+                upd("displayOrder", val);
+              }}
+            />
+          </div>
           <div className="col-span-2"><FL optional>Highlights (Comma separated)</FL><TA placeholder="Key highlights of this package..." value={form.highlights?.join(",\n") || ""} onChange={e => upd("highlights", e.target.value.split(",").map(t => t.trim()).filter(Boolean))} rows={3} /></div>
         </div>
       </Card>

@@ -14,6 +14,7 @@ export interface Package {
   duration: string;
   price: PriceInfo;
   maxGuests: number;
+  displayOrder?: number;
 }
 
 export interface FeaturedData {

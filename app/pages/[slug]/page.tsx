@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getDatabase } from "@/app/utils/getDatabase";
-import LayoutV2 from "@/app/layouts-v2/LayoutV2";
+import { getDatabase } from "../../utils/getDatabase";
+import LayoutV2 from "../../layouts-v2/LayoutV2";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

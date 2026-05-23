@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
 
     const maxTravelersLimit = body.maxTravelersLimit !== undefined && body.maxTravelersLimit !== null ? Number(body.maxTravelersLimit) : undefined;
     const availableSeats = body.availableSeats !== undefined && body.availableSeats !== null ? Number(body.availableSeats) : maxTravelersLimit;
+    const displayOrder = body.displayOrder !== undefined && body.displayOrder !== null && body.displayOrder !== "" ? Number(body.displayOrder) : undefined;
 
     const result = await collection.insertOne({
       ...body,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
       itinerary: cleanedItinerary,
       maxTravelersLimit,
       availableSeats,
+      displayOrder,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -225,6 +227,18 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Sort by displayOrder ASC (packages without displayOrder appear at the end)
+    normalizedPackages.sort((a: any, b: any) => {
+      const orderA = a.displayOrder ?? Infinity;
+      const orderB = b.displayOrder ?? Infinity;
+      if (orderA === orderB) {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      }
+      return orderA - orderB;
+    });
+
     return NextResponse.json(
       { success: true, data: normalizedPackages },
       {
@@ -301,6 +315,8 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    const displayOrder = body.displayOrder !== undefined && body.displayOrder !== null && body.displayOrder !== "" ? Number(body.displayOrder) : undefined;
+
     await collection.updateOne(
       { _id: new ObjectId(id) },
       {
@@ -311,6 +327,7 @@ export async function PUT(req: NextRequest) {
           itinerary: cleanedItinerary,
           maxTravelersLimit,
           availableSeats,
+          displayOrder,
           updatedAt: new Date(),
         },
       }

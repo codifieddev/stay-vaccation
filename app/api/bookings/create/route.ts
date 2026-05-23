@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "@/app/utils/getDatabase";
 import jwt from "jsonwebtoken";
-import { sendBookingEmail, sendEmailAsync, sendAdminBookingAlertAsync } from "@/app/utils/email";
+import { sendBookingEmail, sendEmailAsync, sendAdminBookingAlert, sendAdminBookingAlertAsync } from "@/app/utils/email";
 import { ObjectId } from "mongodb";
 
 export const dynamic = "force-dynamic";
@@ -213,21 +213,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin alert: always notify admin on new booking creation
-    sendAdminBookingAlertAsync({
-      bookingId,
-      packageName: insertData.packageName,
-      travelDate: insertData.travelDate,
-      returnDate: insertData.returnDate,
-      travellers: insertData.travellers,
-      totalAmount: insertData.totalAmount,
-      currency: insertData.currency,
-      bookingStatus: insertData.bookingStatus,
-      userEmail: insertData.userEmail,
-      userName: insertData.userName || "Valued Customer",
-      userPhone: insertData.userPhone,
-      notes: insertData.notes,
-      eventType: "new_booking",
-    });
+    try {
+      console.log(`[Admin Email] Attempting to send admin notification for booking ${bookingId} to ${process.env.ADMIN_EMAIL || 'default admin'}`);
+      await sendAdminBookingAlert({
+        bookingId,
+        packageName: insertData.packageName,
+        travelDate: insertData.travelDate,
+        returnDate: insertData.returnDate,
+        travellers: insertData.travellers,
+        totalAmount: insertData.totalAmount,
+        currency: insertData.currency,
+        bookingStatus: insertData.bookingStatus,
+        userEmail: insertData.userEmail,
+        userName: insertData.userName || "Valued Customer",
+        userPhone: insertData.userPhone,
+        notes: insertData.notes,
+        eventType: "new_booking",
+      });
+      console.log(`[Admin Email] Admin notification sent successfully for booking ${bookingId}`);
+    } catch (err: any) {
+      console.error(`[Admin Email] Failed to send admin notification for booking ${bookingId}:`, err);
+    }
 
     return responsePayload;
   } catch (err) {

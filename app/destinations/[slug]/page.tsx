@@ -101,6 +101,13 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
     id: p._id.toString(),
   })) as any;
 
+  // Sort by displayOrder ASC (packages without displayOrder appear at the end)
+  normalizedPackages.sort((a, b) => {
+    const orderA = a.displayOrder ?? Infinity;
+    const orderB = b.displayOrder ?? Infinity;
+    return orderA - orderB;
+  });
+
   return (
     <LayoutV2>
       {/* Hero Section */}

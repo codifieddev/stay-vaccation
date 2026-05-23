@@ -16,6 +16,7 @@ const emptyPackage = () => ({
   price: { currency: "INR", amount: "" },
   shortDescription: "",
   longDescription: "",
+  displayOrder: "",
   availability: { availableMonths: [], fixedDepartureDates: [], blackoutDates: [] },
   inclusions: [],
   exclusions: [],

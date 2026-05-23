@@ -76,10 +76,18 @@ export async function GET() {
               currency: pkg.price?.currency || "INR",
               originalAmount: Number(pkg.price?.originalAmount) || 0
             },
-            maxGuests: Number(pkg.maxGuests) || Number(pkg.capacity) || 12
+            maxGuests: Number(pkg.maxGuests) || Number(pkg.capacity) || 12,
+            displayOrder: pkg.displayOrder !== undefined && pkg.displayOrder !== null ? Number(pkg.displayOrder) : undefined
           };
         })
         .filter(Boolean);
+
+      // Sort by displayOrder ASC (packages without displayOrder appear at the end)
+      optimizedPackages.sort((a: any, b: any) => {
+        const orderA = a.displayOrder ?? Infinity;
+        const orderB = b.displayOrder ?? Infinity;
+        return orderA - orderB;
+      });
     }
 
     return NextResponse.json({

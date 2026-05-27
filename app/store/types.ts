@@ -12,3 +12,4 @@ export * from "./features/businessSettings/types";
 export * from "./features/admin/types";
 export * from "./features/bookings/types";
 export * from "./features/search/types";
+export * from "./features/bookingPlans/types";

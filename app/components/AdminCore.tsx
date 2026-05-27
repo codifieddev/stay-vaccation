@@ -178,7 +178,7 @@ const emptyKBYG = (): KBYG => ({ id: uid(), point: "" });
 const emptyAdditionalInfo = () => ({ aboutDestination: "", quickInfo: { destinationsCovered: "", duration: "", startPoint: "", endPoint: "" }, experiencesCovered: [], notToMiss: [] });
 const makeDay = (n: number): ItineraryDay => ({ id: uid(), day: n, dayNumber: n, title: n === 1 ? "Arrival Day" : `Day ${n}`, city: "", dayType: n === 1 ? "arrival" : "sightseeing", mealsIncluded: [], notes: "", description: "", images: [], hotelStays: [], transfers: [], activities: [] });
 
-const emptyCategory = (): Category => ({ name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", gradient: "from-cyan-400 to-blue-500", image: "", link: "", order: 0, description: "", shortLocationList: "", isActive: true });
+const emptyCategory = (): Category => ({ name: "", slug: "", icon: "Beach", color: "from-cyan-400 to-blue-500", gradient: "from-cyan-400 to-blue-500", image: "", link: "", order: 0, displayOrder: undefined, description: "", shortLocationList: "", isActive: true });
 
 // ─── RESOLVE HELPERS (two-way sync merge) ─────────────────────────
 const resolveActivity = (dayAct: DayActivity, masters: MasterActivity[]) => {
@@ -3484,6 +3484,7 @@ export const Sidebar = ({ page, setPage, counts }) => {
     { key: "dashboard", label: "Dashboard", icon: <Ic.Dashboard />, group: "main" },
     { key: "packages", label: "Travel Packages", icon: <Ic.Package />, group: "main", badge: counts.packages },
     { key: "bookings", label: "Bookings", icon: <Ic.Booking />, group: "main", badge: counts.bookings },
+    { key: "booking-plans", label: "Booking Plans", icon: <Ic.Document />, group: "main", badge: counts.bookingPlans },
     { key: "transfers", label: "Transfers", icon: <Ic.Car />, group: "main", badge: counts.transfers },
     { key: "coupons", label: "Coupons", icon: <Ic.Tag />, group: "main", badge: counts.coupons },
 
@@ -3707,7 +3708,7 @@ export const CategoryForm = ({ initial, onSave, onCancel }: { initial: Category;
         </div>
         <div>
           <FL>Display Order</FL>
-          <Inp type="number" value={data.order} onChange={e => setData({ ...data, order: Number(e.target.value) })} />
+          <Inp type="number" placeholder="e.g. 1 (first), 2, 3..." value={data.displayOrder ?? ""} onChange={e => setData({ ...data, displayOrder: e.target.value === "" ? undefined : Number(e.target.value) })} />
         </div>
         <div className="col-span-2">
           <FL>Description</FL>

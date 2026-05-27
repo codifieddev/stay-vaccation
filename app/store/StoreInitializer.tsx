@@ -15,6 +15,8 @@ import { fetchTransfers } from "./features/transfers/transferThunks";
 import { fetchBusinessSettings } from "./features/businessSettings/businessSettingsThunks";
 import { fetchAdminStats } from "./features/admin/adminThunks";
 import { fetchCurrencies } from "./features/currency/currencyThunks";
+import { fetchBookingPlans } from "./features/bookingPlans/bookingPlanThunks";
+import { fetchBookings } from "./features/bookings/bookingThunks";
 
 export default function StoreInitializer() {
   const dispatch = useAppDispatch();
@@ -32,6 +34,8 @@ export default function StoreInitializer() {
     dispatch(fetchCoupons());
     dispatch(fetchTransfers());
     dispatch(fetchCurrencies());
+    dispatch(fetchBookingPlans());
+    dispatch(fetchBookings());
 
     dispatch(fetchBusinessSettings());
     dispatch(fetchAdminStats());

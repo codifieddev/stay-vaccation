@@ -105,6 +105,11 @@ export default async function DestinationPage({ params }: { params: Promise<{ sl
   normalizedPackages.sort((a, b) => {
     const orderA = a.displayOrder ?? Infinity;
     const orderB = b.displayOrder ?? Infinity;
+    if (orderA === orderB) {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    }
     return orderA - orderB;
   });
 

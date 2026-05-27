@@ -19,7 +19,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: { ...cat, _id: cat._id.toString() } });
     }
 
-    const categories = await collection.find().sort({ order: 1 }).toArray();
+    const categories = await collection.aggregate([
+      {
+        $addFields: {
+          sortOrder: { $ifNull: [ "$displayOrder", 999999999 ] }
+        }
+      },
+      {
+        $sort: { sortOrder: 1, name: 1 }
+      }
+    ]).toArray();
     
     return NextResponse.json({ 
       success: true, 

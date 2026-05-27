@@ -28,7 +28,12 @@ export async function getBestSellingPackages(limit = 8, category?: string) {
     }
 
     pipeline.push(
-      { $sort: { "price.amount": 1 } },
+      {
+        $addFields: {
+          sortOrder: { $ifNull: [ "$displayOrder", 999999999 ] }
+        }
+      },
+      { $sort: { sortOrder: 1, createdAt: -1 } },
       { $limit: limit },
       {
         $project: {
@@ -42,6 +47,8 @@ export async function getBestSellingPackages(limit = 8, category?: string) {
           destinationSlug: 1,
           travelStyle: 1,
           shortDescription: 1,
+          displayOrder: 1,
+          createdAt: 1,
         },
       }
     );
@@ -62,6 +69,7 @@ export async function getBestSellingPackages(limit = 8, category?: string) {
       destinationSlug: p.destinationSlug || "",
       travelStyle: p.travelStyle || "",
       shortDescription: p.shortDescription || "",
+      displayOrder: p.displayOrder !== undefined && p.displayOrder !== null ? Number(p.displayOrder) : undefined,
     }));
   } catch (error) {
     console.error("Error fetching best selling packages:", error);

@@ -37,21 +37,36 @@ const BookingPlan: React.FC<BookingPlanProps> = ({ section: propSection }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !destination) {
       alert('Please fill in all the details.');
       return;
     }
     setIsSubmitting(true);
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/booking-plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fullName, email, destination }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setIsSuccess(true);
+        setFullName('');
+        setEmail('');
+        setDestination('');
+      } else {
+        alert(result.message || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error submitting booking plan:', err);
+      alert('Failed to submit booking plan. Please check your network connection.');
+    } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-      setFullName('');
-      setEmail('');
-      setDestination('');
-    }, 1500);
+    }
   };
 
   const destinationOptions: string[] = p.destinationOptions || [];

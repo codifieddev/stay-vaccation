@@ -36,13 +36,16 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
 
   const categories = useAppSelector(state => state.categories.categories);
   const currencies = useAppSelector(state => state.currency.currencies);
+  const bookingPlans = useAppSelector(state => state.bookingPlans.bookingPlans);
+  const bookings = useAppSelector(state => state.bookings.bookings);
 
   const counts = {
     packages: packages.length,
     activities: masterActivities.length,
     hotels: masterHotels.length,
     coupons: coupons.length,
-    bookings: 0,
+    bookings: bookings.length,
+    bookingPlans: bookingPlans.length,
     transfers: transfers.length,
     destinations: destinations.length,
 
@@ -53,6 +56,7 @@ export default function AdminLayoutWrapper({ children, section: propSection }: {
   const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     dashboard: { title: "Dashboard", subtitle: "Stay Vacation — Travel Management" },
     packages: { title: "Travel Packages", subtitle: `${packages.length} packages in catalog` },
+    "booking-plans": { title: "Booking Plans", subtitle: `${bookingPlans.length} custom booking plans submitted` },
     create: { title: "Create Package", subtitle: "Add a new travel package to your catalog" },
     edit: { title: "Edit Package", subtitle: "Modify an existing travel package" },
     view: { title: "Package Details", subtitle: "Viewing package details" },

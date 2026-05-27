@@ -14,6 +14,7 @@ import adminReducer from "./features/admin/adminSlice";
 import bookingReducer from "./features/bookings/bookingSlice";
 import searchReducer from "./features/search/searchSlice";
 import currencyReducer from "./features/currency/currencySlice";
+import bookingPlansReducer from "./features/bookingPlans/bookingPlanSlice";
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +33,7 @@ export const store = configureStore({
     bookings: bookingReducer,
     search: searchReducer,
     currency: currencyReducer,
+    bookingPlans: bookingPlansReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

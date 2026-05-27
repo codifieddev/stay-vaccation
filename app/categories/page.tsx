@@ -1,6 +1,6 @@
 import LayoutV2 from "../layouts-v2/LayoutV2";
 import CategoriesHero from "../sections-v2/categoriespage/categoriesHero/CategoriesHero";
-import CategoryCardV2 from "../components-v2/CategoryCardV2";
+import CategoriesList from "../sections-v2/categoriespage/categories/CategoriesList";
 import ButtonV2 from "../components-v2/ButtonV2";
 import LucideIcon from "../components/LucideIcon";
 import { getCategoryIcon } from "../utils/categoryMapping";
@@ -48,23 +48,7 @@ export default async function CategoriesPage() {
     <LayoutV2>
       <CategoriesHero />
 
-      <section style={{ padding: '6rem 0', background: 'var(--white)' }}>
-        <div className="container-v2">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
-            {categoriesWithCount.filter((cat: any) => cat.isActive).map((cat: any, i: number) => (
-              <CategoryCardV2 key={cat._id} cat={cat} index={i} />
-            ))}
-          </div>
-
-          {categoriesWithCount.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '5rem 0', background: 'var(--cream)', borderRadius: '2rem', border: '2px dashed #e5e7eb' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏝️</div>
-              <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: '1.4rem', marginBottom: '1rem' }}>No categories found</h3>
-              <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Check back later for exciting travel styles.</p>
-            </div>
-          )}
-        </div>
-      </section>
+      <CategoriesList categories={categoriesWithCount} />
 
       {/* CTA Section */}
       <section style={{ padding: '6rem 0', background: 'var(--cream)', position: 'relative', overflow: 'hidden' }}>

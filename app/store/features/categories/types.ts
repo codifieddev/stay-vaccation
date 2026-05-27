@@ -10,6 +10,7 @@ export interface Category {
   image?: string;
   link?: string;
   order?: number;
+  displayOrder?: number;
   shortLocationList?: string;
 }
 

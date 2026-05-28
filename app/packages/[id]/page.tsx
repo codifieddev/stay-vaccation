@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/app/store/hooks";
 import { useCurrency } from "@/app/hooks/useCurrency";
@@ -131,6 +131,36 @@ export default function SinglePackagePage() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [openDays, setOpenDays] = useState<Set<number>>(new Set([0]));
 
+  const activitiesByDay = useMemo(() => {
+    if (!pkg?.itinerary) return [];
+    return pkg.itinerary.map((day: any, idx: number) => {
+      const dayNum = day.day || day.dayNumber || idx + 1;
+      const dayTitle = day.title || `Day ${dayNum}`;
+      
+      const dayActivities = (day.activities || [])
+        .filter((act: any) => act.customTitle || act.activityData?.title)
+        .map((act: any) => {
+          const title = act.customTitle || act.activityData?.title || "";
+          const description = act.customDescription || act.activityData?.description || "Immerse yourself in this curated local experience.";
+          const images = (Array.isArray(act.customImages) && act.customImages.length > 0)
+            ? act.customImages
+            : (act.activityData?.images || []);
+          return {
+            ...act,
+            title,
+            description,
+            images,
+          };
+        });
+      
+      return {
+        dayNum,
+        dayTitle,
+        activities: dayActivities,
+      };
+    }).filter((d: any) => d.activities.length > 0);
+  }, [pkg?.itinerary]);
+
   // Enquiry form state
   const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", adults: "2", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -234,14 +264,15 @@ export default function SinglePackagePage() {
   }
 
   const basePriceValue = Number(pkg.price?.amount) || 0;
-  const discountedPriceValue = Number(pkg.price?.originalAmount) || 0;
+  const originalPriceValue = Number(pkg.price?.originalAmount) || 0;
   
-  const hasDiscount = discountedPriceValue > 0 && discountedPriceValue < basePriceValue;
-  const savingsValue = hasDiscount ? basePriceValue - discountedPriceValue : 0;
+  const hasDiscount = originalPriceValue > basePriceValue;
+  const savingsValue = hasDiscount ? originalPriceValue - basePriceValue : 0;
+  const baseCurrency = pkg.price?.currency || "INR";
 
-  const mainPrice = hasDiscount ? formatPrice(discountedPriceValue, "INR") : formatPrice(basePriceValue, "INR");
-  const strikePrice = hasDiscount ? formatPrice(basePriceValue, "INR") : null;
-  const savings = hasDiscount ? formatPrice(savingsValue, "INR") : null;
+  const mainPrice = formatPrice(basePriceValue, baseCurrency);
+  const strikePrice = hasDiscount ? formatPrice(originalPriceValue, baseCurrency) : null;
+  const savings = hasDiscount ? formatPrice(savingsValue, baseCurrency) : null;
   const days = pkg.tripDuration?.match(/^(\d+)/)?.[1] || "—";
   const nights = pkg.tripDuration?.match(/(\d+)\s*Night/i)?.[1] || String(Number(days) - 1);
 
@@ -269,7 +300,7 @@ export default function SinglePackagePage() {
   return (
     <LayoutV2>
       {/* ─── HERO & GALLERY ────────────────────────────────────────────────────── */}
-      <section className="relative pt-12 pb-24 bg-[#f8f9fa] overflow-hidden">
+      <section className="relative pt-28 md:pt-32 pb-24 bg-[#f8f9fa] overflow-hidden">
         <div className="container-sv relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-12 items-start">
             {/* Left Column */}
@@ -397,17 +428,17 @@ export default function SinglePackagePage() {
                 </p>
               </div>
 
-              {/* Tab Navigation Sticky capsule style */}
-              <div ref={tabBarRef} className="sticky top-20 z-45 bg-white/80 backdrop-blur-xl border border-gray-100/50 p-2 rounded-2.5xl shadow-[0_15px_40px_rgba(15,23,42,0.04)] mb-10 sticky-tab-nav">
-                <div className="flex overflow-x-auto no-scrollbar gap-1">
+              {/* Tab Navigation Clean Luxury Style */}
+              <div ref={tabBarRef} className="sticky top-20 z-45 bg-white/95 backdrop-blur-xl border-b border-gray-200/60 mb-10 sticky-tab-nav">
+                <div className="flex overflow-x-auto no-scrollbar gap-8 md:gap-10 px-1">
                   {TABS.map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-6 py-3.5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap rounded-2xl transition-all duration-300 ${
+                      className={`relative py-4.5 text-[11px] font-black uppercase tracking-[0.18em] whitespace-nowrap transition-all duration-300 border-b-2 -mb-[2px] cursor-pointer ${
                         activeTab === tab 
-                          ? "bg-[#4a90e2] text-white shadow-[0_4px_15px_rgba(74,144,226,0.25)] hover:translate-y-[-1px]" 
-                          : "text-gray-400 hover:text-[#1a3f4e] hover:bg-gray-50/80"
+                          ? "text-[#1a3f4e] border-[#ff9500]" 
+                          : "text-gray-400 border-transparent hover:text-[#1a3f4e] hover:border-gray-300"
                       }`}
                     >
                       {tab}
@@ -470,112 +501,319 @@ export default function SinglePackagePage() {
 
                 {activeTab === "Itinerary" && (
                   <div className="space-y-6 animate-fade-in">
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-2xl tracking-tight">Daily Journey</h2>
-                      <button onClick={() => setOpenDays(new Set(pkg.itinerary?.map((_, i) => i) || []))} className="text-[10px] font-black uppercase tracking-widest text-[#4a90e2] hover:text-[#ff6b00] transition-colors duration-300">Expand All</button>
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-2xl tracking-tight">Day-by-Day Itinerary</h2>
+                        <p className="text-xs text-gray-400 mt-1 font-medium">{pkg.itinerary?.length || 0} days · tap any day to expand</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setOpenDays(new Set(pkg.itinerary?.map((_, i) => i) || []))}
+                          className="text-[9px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl bg-[#4a90e2]/10 text-[#4a90e2] hover:bg-[#4a90e2] hover:text-white transition-all duration-200"
+                        >Expand All</button>
+                        <button
+                          onClick={() => setOpenDays(new Set())}
+                          className="text-[9px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all duration-200"
+                        >Collapse All</button>
+                      </div>
                     </div>
 
-                    {/* Daily Journey vertical timeline */}
-                    <div className="relative border-l-2 border-dashed border-gray-200 pl-8 ml-6 space-y-12">
-                      {pkg.itinerary?.map((day, idx) => {
-                        const open = openDays.has(idx);
-                        return (
-                          <div key={idx} className="relative group">
-                            {/* Glowing Day Indicator Node */}
-                            <div className={`absolute -left-[50px] top-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm transition-all duration-300 ${
-                              open 
-                                ? "bg-[#4a90e2] text-white ring-4 ring-[#e8f4fd]" 
-                                : "bg-white text-gray-400 border border-gray-200 group-hover:border-[#4a90e2] group-hover:text-[#4a90e2]"
-                            }`}>
-                              {day.day || day.dayNumber}
-                            </div>
-
-                            {/* Card Body */}
-                            <div className={`bg-white rounded-[2rem] border transition-all duration-500 overflow-hidden ${
-                              open 
-                                ? "border-[#4a90e2]/25 shadow-[0_15px_40px_rgba(74,144,226,0.04)]" 
-                                : "border-gray-100/80 shadow-sm hover:border-gray-200 hover:shadow-md"
-                            }`}>
-                              <button onClick={() => toggleDay(idx)} className="w-full text-left flex items-center gap-6 p-6 md:p-8 hover:bg-gray-50/50 transition-colors duration-300">
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-[#4a90e2] mb-1.5 block">Day {day.day || day.dayNumber}</span>
-                                  <h3 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-lg md:text-xl tracking-tight leading-snug">{day.title}</h3>
-                                  
-                                  <div className="flex flex-wrap items-center gap-2.5 mt-3">
-                                    {day.city && (
-                                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 text-gray-500 border border-gray-200/50 rounded-full text-[9px] font-black uppercase tracking-wider">
-                                        📍 {day.city}
-                                      </span>
-                                    )}
-                                    {day.dayType && (
-                                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-50 text-[#ff6b00] border border-orange-100/50 rounded-full text-[9px] font-black uppercase tracking-wider">
-                                        ✦ {day.dayType}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                  open ? "bg-[#e8f4fd] text-[#4a90e2] rotate-180" : "bg-gray-50 text-gray-400 group-hover:bg-gray-100"
-                                }`}>
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
-                                </div>
-                              </button>
-
-                              {/* Smooth Collapse Content */}
-                              <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                                open ? "max-h-[800px] border-t border-gray-50" : "max-h-0"
+                    {/* Timeline */}
+                    <div className="relative">
+                      {/* Vertical rail */}
+                      <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-[#4a90e2]/50 via-[#4a90e2]/20 to-transparent rounded-full" />
+                      <div className="space-y-4">
+                        {pkg.itinerary?.map((day, idx) => {
+                          const open = openDays.has(idx);
+                          const dayNum = day.day || day.dayNumber || idx + 1;
+                          const accentMap: Record<string, { bar: string; badge: string; nodeBg: string; nodeRing: string }> = {
+                            arrival:     { bar: "bg-emerald-500",  badge: "bg-emerald-100 text-emerald-700",  nodeBg: "bg-emerald-500",  nodeRing: "ring-emerald-100" },
+                            sightseeing: { bar: "bg-[#4a90e2]",    badge: "bg-[#e8f4fd] text-[#4a90e2]",      nodeBg: "bg-[#4a90e2]",    nodeRing: "ring-[#e8f4fd]" },
+                            transfer:    { bar: "bg-orange-500",   badge: "bg-orange-50 text-orange-600",     nodeBg: "bg-orange-500",   nodeRing: "ring-orange-100" },
+                            leisure:     { bar: "bg-violet-500",   badge: "bg-violet-50 text-violet-700",     nodeBg: "bg-violet-500",   nodeRing: "ring-violet-100" },
+                            departure:   { bar: "bg-slate-400",    badge: "bg-slate-100 text-slate-600",      nodeBg: "bg-slate-400",    nodeRing: "ring-slate-100" },
+                          };
+                          const accent = accentMap[day.dayType?.toLowerCase?.() || ""] || accentMap.sightseeing;
+                          const mealLabels: string[] = (day.mealsIncluded || []).filter(Boolean);
+                          const actCount = (day.activities || []).filter((a: any) => a.customTitle || a.activityData?.title).length;
+                          const hotelCount = (day.hotelStays || []).length;
+                          return (
+                            <div key={idx} className="relative pl-12">
+                              {/* Timeline node */}
+                              <div className={`absolute left-0 top-5 w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-md ring-4 transition-all duration-300 z-10 ${
+                                open
+                                  ? `${accent.nodeBg} text-white ${accent.nodeRing}`
+                                  : "bg-white text-gray-400 border-2 border-gray-200 ring-4 ring-white hover:border-[#4a90e2] hover:text-[#4a90e2]"
                               }`}>
-                                <div className="p-6 md:p-8 space-y-6">
-                                  <div className="flex flex-col xl:flex-row gap-8">
-                                    <div className="flex-1">
-                                      {day.description && day.description.trim() && (
-                                        <p className="text-sm md:text-base text-gray-600 leading-relaxed font-bold italic border-l-4 border-[#4a90e2]/30 pl-4 py-1">
-                                          "{day.description}"
-                                        </p>
+                                {dayNum}
+                              </div>
+                              {/* Card */}
+                              <div className={`rounded-2xl border overflow-hidden transition-all duration-300 ${
+                                open
+                                  ? "border-gray-200 shadow-[0_8px_30px_rgba(15,23,42,0.07)]"
+                                  : "border-gray-100 bg-white shadow-sm hover:shadow-md hover:border-gray-200"
+                              }`}>
+                                {/* Color accent top strip */}
+                                <div className={`h-[3px] ${open ? accent.bar : "bg-gray-100"} transition-all duration-300`} />
+                                {/* Clickable header */}
+                                <button
+                                  onClick={() => toggleDay(idx)}
+                                  className="w-full text-left flex items-start gap-4 px-5 py-4 md:px-6 md:py-5 bg-white hover:bg-gray-50/70 transition-colors duration-200 group"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                      <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Day {dayNum}</span>
+                                      {day.dayType && (
+                                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${accent.badge}`}>
+                                          {day.dayType}
+                                        </span>
                                       )}
-                                      {day.notes && (
-                                        <div className="mt-4 p-4 bg-amber-50/50 rounded-2xl text-xs text-amber-900 border border-amber-100/50 font-bold flex gap-2.5 items-start">
-                                          <span className="text-base leading-none">💡</span>
-                                          <p className="leading-relaxed">{day.notes}</p>
-                                        </div>
+                                      {day.city && (
+                                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                          📍 {day.city}
+                                        </span>
                                       )}
                                     </div>
-                                    {day.images && day.images.length > 0 && (
-                                      <div className="w-full xl:w-72 flex-shrink-0 rounded-2xl overflow-hidden border border-gray-100 shadow-md">
-                                        <HeroSlider images={day.images} title={day.title} />
+                                    <h3 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-base md:text-[1.05rem] leading-snug tracking-tight">
+                                      {day.title || `Day ${dayNum}`}
+                                    </h3>
+                                    {/* Summary chips — always visible */}
+                                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                      {mealLabels.length > 0 && (
+                                        <span className="text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                          🍽 {mealLabels.join(" · ")}
+                                        </span>
+                                      )}
+                                      {actCount > 0 && (
+                                        <span className="text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#e8f4fd] text-[#4a90e2] border border-[#4a90e2]/15">
+                                          ✦ {actCount} {actCount === 1 ? "Activity" : "Activities"}
+                                        </span>
+                                      )}
+                                      {hotelCount > 0 && (
+                                        <span className="text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
+                                          🏨 {hotelCount} {hotelCount === 1 ? "Hotel" : "Hotels"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {/* Chevron */}
+                                  <div className={`mt-1 w-8 h-8 rounded-full shrink-0 flex items-center justify-center transition-all duration-300 ${
+                                    open ? `${accent.nodeBg} text-white rotate-180` : "bg-gray-50 text-gray-400 group-hover:bg-gray-100"
+                                  }`}>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </div>
+                                </button>
+                                {/* Expanded body — grid-rows trick avoids max-h content clipping */}
+                                <div className={`grid transition-all duration-500 ease-in-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                                  <div className="overflow-hidden">
+                                    <div className="bg-white border-t border-gray-50 p-5 md:p-7 space-y-5">
+                                      <div className="flex flex-col xl:flex-row gap-6">
+                                        <div className="flex-1 space-y-4">
+                                          {day.description?.trim() && (
+                                            <div className={`pl-4 border-l-[3px] rounded-r-lg ${accent.bar.replace("bg-", "border-")}`}>
+                                              <p className="text-sm text-gray-600 leading-relaxed font-medium italic">{day.description}</p>
+                                            </div>
+                                          )}
+                                          {day.notes && (
+                                            <div className="flex gap-3 p-3.5 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-800 font-semibold">
+                                              <span className="shrink-0 text-sm leading-none">💡</span>
+                                              <p className="leading-relaxed">{day.notes}</p>
+                                            </div>
+                                          )}
+                                          {actCount > 0 && (
+                                            <div className="space-y-2">
+                                              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                                                <span className="w-4 h-px bg-gray-200 inline-block" />
+                                                Today&apos;s Activities
+                                              </p>
+                                              {(day.activities || [])
+                                                .filter((a: any) => a.customTitle || a.activityData?.title)
+                                                .map((a: any, ai: number) => {
+                                                  const aTitle = a.customTitle || a.activityData?.title;
+                                                  const aImg = a.customImages?.[0] || a.activityData?.images?.[0];
+                                                  return (
+                                                    <div key={ai} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#4a90e2]/20 hover:bg-[#f8fbff] transition-all group/act">
+                                                      {aImg ? (
+                                                        <div className="w-9 h-9 rounded-lg overflow-hidden relative shrink-0">
+                                                          <Image src={aImg} alt={aTitle} fill className="object-cover" sizes="36px" />
+                                                        </div>
+                                                      ) : (
+                                                        <div className="w-9 h-9 rounded-lg bg-[#e8f4fd] text-[#4a90e2] flex items-center justify-center shrink-0">
+                                                          <LucideIcon name="Compass" size={14} />
+                                                        </div>
+                                                      )}
+                                                      <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-[#1a3f4e] truncate group-hover/act:text-[#4a90e2] transition-colors">{aTitle}</p>
+                                                        {a.time && <p className="text-[9px] text-gray-400 font-semibold mt-0.5">{fmt12(a.time)}</p>}
+                                                      </div>
+                                                      <div className="flex gap-1 shrink-0">
+                                                        {a.guideIncluded && <span className="text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Guide</span>}
+                                                        {a.ticketIncluded && <span className="text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">Ticket</span>}
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {/* Day photo */}
+                                        {day.images && day.images.length > 0 && (
+                                          <div className="w-full xl:w-64 shrink-0 rounded-2xl overflow-hidden shadow-md border border-gray-100">
+                                            <HeroSlider images={day.images} title={day.title} />
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
 
+
+
                 {activeTab === "Activities" && (
-                  <div className="space-y-8 animate-fade-in">
-                    <h2 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-2xl tracking-tight mb-8">Curated Activities</h2>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {(pkg.activities || pkg.activitiesList || []).map((act: any, i: number) => {
-                        const title = typeof act === "string" ? act : act.title;
-                        return (
-                          <div key={i} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 p-6 flex gap-6 hover:shadow-[0_15px_35px_rgba(15,23,42,0.06)] hover:border-gray-200 transition-all duration-300 group">
-                            <div className="w-16 h-16 bg-[#e8f4fd] text-[#4a90e2] rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-[#4a90e2] group-hover:text-white transition-all duration-300 shadow-sm">
-                              <LucideIcon name="Camera" size={24} />
+                  <div className="space-y-10 animate-fade-in">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h2 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-2xl tracking-tight">Curated Activities</h2>
+                        <p className="text-xs text-gray-400 mt-1 font-medium">Grouped by daily itinerary schedule</p>
+                      </div>
+                    </div>
+
+                    {activitiesByDay.length > 0 ? (
+                      <div className="space-y-12 relative pl-6 mt-6">
+                        {/* Vertical line connection */}
+                        <div className="absolute left-[9px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-[#4a90e2]/30 via-gray-150 to-transparent rounded-full" />
+                        
+                        {activitiesByDay.map((dayGroup: any, idx: number) => (
+                          <div key={idx} className="relative space-y-5">
+                            {/* Day Indicator Node */}
+                            <div className="absolute -left-[30px] top-1.5 flex items-center justify-center">
+                              <div className="w-5 h-5 rounded-full bg-white border-2 border-[#4a90e2] flex items-center justify-center shadow-sm">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#4a90e2]" />
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <h3 className="font-['Poppins'] font-bold text-[#1a3f4e] text-base mb-1.5 group-hover:text-[#4a90e2] transition-colors duration-300">{title}</h3>
-                              <p className="text-gray-500 text-xs leading-relaxed">{act.description || "Immerse yourself in this curated local experience."}</p>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-[#4a90e2] bg-[#e8f4fd] px-3 py-1 rounded-full">
+                                Day {dayGroup.dayNum}
+                              </span>
+                              <h3 className="font-['Poppins'] font-extrabold text-[#1a3f4e] text-sm md:text-base leading-snug tracking-tight">
+                                {dayGroup.dayTitle}
+                              </h3>
+                              <div className="flex-1 h-px bg-gradient-to-r from-gray-100 to-transparent" />
+                            </div>
+
+                            {/* Activities grid */}
+                            <div className="grid md:grid-cols-2 gap-6 pl-2">
+                              {dayGroup.activities.map((act: any, ai: number) => {
+                                const hasImages = Array.isArray(act.images) && act.images.length > 0;
+                                return (
+                                  <div key={ai} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 hover:shadow-[0_15px_35px_rgba(15,23,42,0.06)] hover:border-gray-200 transition-all duration-300 group flex flex-col">
+                                    {/* Image area — full-width strip if images exist */}
+                                    {hasImages && (
+                                      <div className="relative w-full h-48 overflow-hidden bg-gray-50 shrink-0">
+                                        {act.images.length === 1 ? (
+                                          <Image
+                                            src={act.images[0]}
+                                            alt={act.title}
+                                            fill
+                                            className="object-cover group-hover:scale-102 transition-transform duration-700"
+                                            sizes="(max-w: 768px) 100vw, 400px"
+                                          />
+                                        ) : (
+                                          /* Multiple images — show a grid or horizontal layout */
+                                          <div className="grid grid-cols-3 gap-1 h-full w-full">
+                                            {act.images.slice(0, 3).map((imgUrl: string, imgIdx: number) => (
+                                              <div key={imgIdx} className="relative h-full w-full overflow-hidden">
+                                                <Image
+                                                  src={imgUrl}
+                                                  alt={`${act.title} ${imgIdx + 1}`}
+                                                  fill
+                                                  className="object-cover hover:scale-105 transition-transform duration-500"
+                                                  sizes="(max-w: 768px) 33vw, 150px"
+                                                />
+                                                {imgIdx === 2 && act.images.length > 3 && (
+                                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-black">
+                                                    +{act.images.length - 3}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    <div className="p-6 flex-1 flex flex-col justify-between">
+                                      <div>
+                                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                                          <h4 className="font-['Poppins'] font-bold text-[#1a3f4e] text-base group-hover:text-[#4a90e2] transition-colors duration-300 leading-snug">
+                                            {act.title}
+                                          </h4>
+                                          {act.time && (
+                                            <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 shrink-0">
+                                              {fmt12(act.time)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-gray-500 text-xs leading-relaxed line-clamp-3">
+                                          {act.description}
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-1.5 mt-4">
+                                        {act.guideIncluded && (
+                                          <span className="text-[8px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                            Guide Included
+                                          </span>
+                                        )}
+                                        {act.ticketIncluded && (
+                                          <span className="text-[8px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                                            Ticket Included
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Fallback for packages with no itinerary activities */
+                      <div className="grid md:grid-cols-2 gap-6 mt-6">
+                        {(pkg.activities || pkg.activitiesList || []).map((act: any, i: number) => {
+                          const title = typeof act === "string" ? act : act.title;
+                          const desc = typeof act === "string" ? "Immerse yourself in this curated local experience." : act.description || "Immerse yourself in this curated local experience.";
+                          const img = typeof act === "string" ? null : act.images?.[0] || act.image || null;
+                          return (
+                            <div key={i} className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 p-6 flex gap-6 hover:shadow-[0_15px_35px_rgba(15,23,42,0.06)] hover:border-gray-200 transition-all duration-300 group">
+                              <div className="w-16 h-16 bg-[#e8f4fd] text-[#4a90e2] rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-[#4a90e2] group-hover:text-white transition-all duration-300 shadow-sm relative overflow-hidden">
+                                {img ? (
+                                  <Image src={img} alt={title} fill className="object-cover" sizes="64px" />
+                                ) : (
+                                  <LucideIcon name="Camera" size={24} />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-['Poppins'] font-bold text-[#1a3f4e] text-base mb-1.5 group-hover:text-[#4a90e2] transition-colors duration-300">{title}</h3>
+                                <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 

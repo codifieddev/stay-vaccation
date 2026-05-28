@@ -8,10 +8,10 @@ interface LucideIconProps extends LucideProps {
 }
 
 const LucideIcon = ({ name, ...props }: LucideIconProps) => {
-  const IconComponent = (Icons as any)[name];
+  let IconComponent = (Icons as any)[name];
 
   if (!IconComponent) {
-    return null;
+    IconComponent = Icons.Globe;
   }
 
   return <IconComponent {...props} />;

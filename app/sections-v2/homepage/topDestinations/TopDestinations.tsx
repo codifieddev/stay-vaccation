@@ -2,27 +2,16 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import SectionHeaderV2 from '../../../components-v2/SectionHeaderV2';
 import ButtonV2 from '../../../components-v2/ButtonV2';
 import { topDestinationsData } from './topDestinationsData';
 
+const MotionLink = motion(Link);
+
 interface DynamicContent {
   [key: string]: string;
-}
-
-interface DestinationItemProps {
-  name?: DynamicContent;
-  image?: string;
-  rating?: number;
-  escapes?: DynamicContent;
-  isFeatured?: boolean;
-}
-
-interface ContentItem {
-  id: string;
-  type: string;
-  props: DestinationItemProps;
 }
 
 interface TopDestinationsProps {
@@ -36,16 +25,13 @@ interface TopDestinationsProps {
       btn_text?: DynamicContent;
       btn_link?: string;
     };
-    content?: ContentItem[];
   };
-  /** Optional live destinations from DB/CMS to merge in */
   destinations?: any[];
-  lang?: string;
 }
 
 const TopDestinations: React.FC<TopDestinationsProps> = ({
   section: propSection,
-  destinations,
+  destinations = [],
 }) => {
   const pathname = usePathname();
 
@@ -55,56 +41,38 @@ const TopDestinations: React.FC<TopDestinationsProps> = ({
     return 'en';
   }, [pathname]);
 
-  // Prioritize exported TS data, fallback to CMS prop section — mirrors HeroSection / FaqSection
   const section = (topDestinationsData as any) || propSection || {};
-  const { props = {}, content = [] } = section;
+  const { props = {} } = section;
 
-  // i18n helper — same pattern as HeroSection / BookingPlan
   const t = (obj?: DynamicContent | string): string => {
     if (!obj) return '';
     if (typeof obj === 'string') return obj;
     return obj[lang] || obj['en'] || '';
   };
 
-  // Merge live DB destinations into the static content list when available
-  const displayItems: ContentItem[] = useMemo(() => {
-    const defaults: ContentItem[] = content.length > 0
-      ? content
-      : (topDestinationsData.content as ContentItem[]);
+  // Build the dynamic items from database destinations sorted by displayOrder
+  const displayItems = useMemo(() => {
+    if (!destinations || destinations.length === 0) return [];
 
-    if (!destinations || destinations.length === 0) return defaults;
+    // Sort by displayOrder ascending (default to 999 if displayOrder is not set)
+    const sorted = [...destinations].sort(
+      (a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999)
+    );
 
-    return defaults.map((item) => {
-      const name = item.props.name?.['en'] || '';
-      const dbMatch = destinations.find(
-        (d) =>
-          d.name?.toLowerCase().includes(name.toLowerCase()) ||
-          d.slug?.toLowerCase() === item.id.replace('dest-', '')
-      );
-
-      if (!dbMatch) return item;
-
-      const hasCustomImage =
-        dbMatch.image &&
-        !dbMatch.image.includes('placeholder') &&
-        !dbMatch.image.includes('photo-1514282401047');
-
+    // Limit to top 5 destinations to match the grid layout design
+    return sorted.slice(0, 5).map((d, index) => {
+      const isFeatured = index === 0;
       return {
-        ...item,
-        props: {
-          ...item.props,
-          rating: dbMatch.rating ?? item.props.rating,
-          escapes: dbMatch.packageCount !== undefined
-            ? ({
-              en: `${dbMatch.packageCount} Escape${dbMatch.packageCount !== 1 ? 's' : ''}`,
-              hi: `${dbMatch.packageCount} पैकेज`,
-            } as DynamicContent)
-            : item.props.escapes,
-          image: hasCustomImage ? dbMatch.image : item.props.image,
-        },
+        id: d.id || d.slug || `dest-${index}`,
+        name: d.name || '',
+        slug: d.slug || '',
+        image: d.image || 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&auto=format&fit=crop&q=80',
+        rating: d.rating || 4.9,
+        packageCount: d.packageCount || 0,
+        isFeatured,
       };
     });
-  }, [destinations, content]);
+  }, [destinations]);
 
   return (
     <section id="top-destinations" className="py-20 md:py-28 bg-[#f8f9fa]">
@@ -135,16 +103,17 @@ const TopDestinations: React.FC<TopDestinationsProps> = ({
         {/* Destinations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:grid-rows-[280px_280px]">
           {displayItems.map((item, index) => {
-            const isFeatured = item.props.isFeatured ?? index === 0;
+            const isFeatured = item.isFeatured;
             return (
-              <motion.div
+              <MotionLink
                 key={item.id}
+                href={`/destinations/${item.slug}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.08 }}
                 whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-                className={`group relative overflow-hidden rounded-[24px] cursor-pointer shadow-sm hover:shadow-lg transition-all duration-300
+                className={`group relative overflow-hidden rounded-[24px] cursor-pointer shadow-sm hover:shadow-lg transition-all duration-300 block
                   ${isFeatured
                     ? 'col-span-1 md:col-span-2 lg:col-span-1 lg:row-span-2 h-[420px] md:h-[360px] lg:h-auto'
                     : 'col-span-1 h-[220px] md:h-[260px] lg:h-auto'
@@ -152,8 +121,8 @@ const TopDestinations: React.FC<TopDestinationsProps> = ({
               >
                 {/* Background Image */}
                 <img
-                  src={item.props.image}
-                  alt={t(item.props.name)}
+                  src={item.image}
+                  alt={item.name}
                   loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 />
@@ -167,17 +136,22 @@ const TopDestinations: React.FC<TopDestinationsProps> = ({
                     className={`font-bold tracking-tight mb-1 text-white leading-tight
                       ${isFeatured ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}
                   >
-                    {t(item.props.name)}
+                    {item.name}
                   </h3>
 
                   <div className="flex items-center gap-2 text-white/95 font-medium text-sm md:text-base">
                     <span className="text-amber-400 text-lg">★</span>
-                    <span>{item.props.rating?.toFixed(1)}</span>
+                    <span>{item.rating?.toFixed(1)}</span>
                     <span className="opacity-60 font-light">·</span>
-                    <span className="text-white/90">{t(item.props.escapes)}</span>
+                    <span className="text-white/90">
+                      {lang === 'hi'
+                        ? `${item.packageCount} पैकेज`
+                        : `${item.packageCount} Escape${item.packageCount !== 1 ? 's' : ''}`
+                      }
+                    </span>
                   </div>
                 </div>
-              </motion.div>
+              </MotionLink>
             );
           })}
         </div>

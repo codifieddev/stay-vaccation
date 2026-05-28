@@ -156,6 +156,7 @@ export interface Package {
 
 
   coverImage?: string;
+  coverImages?: string[];
   images?: string[];
   maxTravelersLimit?: number;
   availableSeats?: number;

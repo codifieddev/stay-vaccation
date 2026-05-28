@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import LucideIcon from "@/app/components/LucideIcon";
-import { getCategoryIcon } from "@/app/utils/categoryMapping";
+import { getCategoryIcon, getCategoryFallbackImage } from "@/app/utils/categoryMapping";
 
 interface CategoryHeroV2Props {
   category: {
@@ -19,15 +19,16 @@ interface CategoryHeroV2Props {
 
 const CategoryHeroV2: React.FC<CategoryHeroV2Props> = ({ category, totalPackages }) => {
   const iconName = getCategoryIcon(category.name, category.icon);
+  const bgImage = category.image || getCategoryFallbackImage(category.name);
 
   return (
     <section className="relative pt-32 pb-24 md:py-36 overflow-hidden min-h-[440px] flex items-center bg-slate-950">
       {/* Background Cover Image with Rich Gradient Overlay */}
       <div className="absolute inset-0 z-0">
-        {category.image ? (
+        {bgImage ? (
           <>
             <img
-              src={category.image}
+              src={bgImage}
               alt={category.name}
               className="w-full h-full object-cover object-center scale-105 animate-pulse-slow"
               decoding="async"

@@ -61,6 +61,8 @@ export default function NavbarV2() {
   };
 
   const isHome = pathname === "/";
+  const isLightPage = pathname !== "/";
+  const forceSolid = scrolled || isLightPage;
   const initial = user?.email?.[0]?.toUpperCase() || "U";
 
   // Design.html tokens
@@ -76,7 +78,7 @@ export default function NavbarV2() {
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ease-in-out ${
-          scrolled
+          forceSolid
             ? "bg-white/92 backdrop-blur-xl shadow-[0_2px_20px_rgba(74,144,226,0.12)] py-3"
             : "bg-transparent py-6"
         }`}
@@ -96,10 +98,10 @@ export default function NavbarV2() {
                 </div>
               )}
               <div className="flex flex-col">
-                <div className={`font-['Poppins'] font-[900] text-2xl tracking-[-0.02em] leading-none transition-colors duration-500 ${scrolled ? 'text-[#1a1a2e]' : 'text-white'}`}>
+                <div className={`font-['Poppins'] font-[900] text-2xl tracking-[-0.02em] leading-none transition-colors duration-500 ${forceSolid ? 'text-[#1a1a2e]' : 'text-white'}`}>
                   stay<span className="text-[#ff9500]">Vacation</span>
                 </div>
-                <div className={`text-[9px] font-bold uppercase tracking-[0.3em] mt-1.5 transition-colors duration-500 ${scrolled ? 'text-[#64748b]' : 'text-white/60'}`}>
+                <div className={`text-[9px] font-bold uppercase tracking-[0.3em] mt-1.5 transition-colors duration-500 ${forceSolid ? 'text-[#64748b]' : 'text-white/60'}`}>
                   Premium Getaways
                 </div>
               </div>
@@ -114,7 +116,7 @@ export default function NavbarV2() {
                     key={link.href} 
                     href={link.href}
                     className={`relative px-4 py-2 text-[0.88rem] font-bold tracking-tight transition-all duration-300 group ${
-                      scrolled 
+                      forceSolid 
                         ? (active ? "text-[#ff9500]" : "text-[#1a1a2e] hover:text-[#ff9500]") 
                         : (active ? "text-[#ff9500]" : "text-white/90 hover:text-white")
                     }`}
@@ -132,7 +134,7 @@ export default function NavbarV2() {
                 <button
                   onClick={() => setCurrencyMenuOpen(true)}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 border ${
-                    scrolled 
+                    forceSolid 
                       ? "text-[#1a1a2e]/80 hover:text-[#1a1a2e] bg-gray-100/50 border-gray-200" 
                       : "text-white/80 hover:text-white bg-white/10 border-white/10"
                   }`}
@@ -156,7 +158,7 @@ export default function NavbarV2() {
                       <button
                         onClick={() => setUserMenuOpen((v) => !v)}
                         className={`p-1 rounded-full border transition-all duration-300 ${
-                          scrolled ? "border-gray-200 hover:border-[#ff9500]/50" : "border-white/10 hover:border-white/30"
+                          forceSolid ? "border-gray-200 hover:border-[#ff9500]/50" : "border-white/10 hover:border-white/30"
                         }`}
                       >
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ff9500] to-[#ff6b00] flex items-center justify-center text-white text-xs font-black shadow-lg">
@@ -207,7 +209,7 @@ export default function NavbarV2() {
                       id="navbar-login-btn"
                       href="/login"
                       className={`hidden md:flex items-center gap-2 px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 border ${
-                        scrolled 
+                        forceSolid 
                           ? "bg-white text-[#1a1a2e] border-gray-200 hover:border-[#ff9500] hover:text-[#ff9500]" 
                           : "bg-white/10 text-white border-white/20 hover:bg-white/20"
                       }`}
@@ -223,7 +225,7 @@ export default function NavbarV2() {
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className={`lg:hidden w-11 h-11 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all duration-300 border ${
-                  scrolled ? "bg-gray-100 border-gray-200 text-[#1a1a2e]" : "bg-white/10 border-white/20 text-white"
+                  forceSolid ? "bg-gray-100 border-gray-200 text-[#1a1a2e]" : "bg-white/10 border-white/20 text-white"
                 }`}
                 aria-label="Toggle menu"
               >

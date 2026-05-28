@@ -68,7 +68,7 @@ export async function GET() {
             packageId: pkg.id || "",
             title: pkg.title || "",
             slug: pkg.slug || pkg.id || "",
-            image: Array.isArray(pkg.images) && pkg.images.length > 0 ? pkg.images[0] : (pkg.image || ""),
+            image: pkg.coverImage || (Array.isArray(pkg.images) && pkg.images.length > 0 ? pkg.images[0] : (pkg.image || "")),
             rating: Number(pkg.rating) || Number(pkg.packageRating) || 5,
             duration: pkg.tripDuration || pkg.duration || "",
             price: {

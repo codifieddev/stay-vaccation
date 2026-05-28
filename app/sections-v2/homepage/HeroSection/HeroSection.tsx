@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import LucideIcon from '../../../components/LucideIcon';
 import { heroSectionData } from './heroSectionData';
-import ButtonV2 from '../../../components-v2/ButtonV2';
 
 interface DynamicContent {
   [key: string]: string;
@@ -54,6 +55,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ section: propSection, destina
   const section = (heroSectionData as any) || propSection || {};
   const { props = {}, content = [] } = section;
   const t = (obj?: DynamicContent) => obj?.[lang] || obj?.['en'] || '';
+  const cleanBtnText = (txt: string) => {
+    return txt.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF\u2600-\u27BF]/g, "").trim();
+  };
 
   const slides = content.length > 0 ? content.map((item: any) => item.props.image).filter(Boolean) : [];
 
@@ -110,16 +114,24 @@ const HeroSection: React.FC<HeroSectionProps> = ({ section: propSection, destina
           </p>
         )}
 
-        <div className="hero-btns reveal visible delay-4">
+        <div className="hero-btns flex flex-row items-center justify-center gap-4 flex-wrap reveal visible delay-4 mt-2 mb-10">
           {props.primary_btn_text && (
-            <ButtonV2 href={props.primary_btn_link || '/destinations'} variant="orange" pulse>
-              {t(props.primary_btn_text)}
-            </ButtonV2>
+            <Link 
+              href={props.primary_btn_link || '/destinations'} 
+              className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-[0.15em] rounded-full shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:shadow-[0_8px_30px_rgba(255,149,0,0.45)] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
+            >
+              <LucideIcon name="Compass" size={14} className="group-hover:rotate-12 transition-transform duration-500" />
+              {cleanBtnText(t(props.primary_btn_text))}
+            </Link>
           )}
           {props.secondary_btn_text && (
-            <ButtonV2 href={props.secondary_btn_link || '/contact'} variant="outline" style={{ color: '#fff', borderColor: 'rgba(255,255,255,.5)' }}>
-              {t(props.secondary_btn_text)}
-            </ButtonV2>
+            <Link 
+              href={props.secondary_btn_link || '/contact'} 
+              className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 bg-white/10 backdrop-blur-md text-white border border-white/30 text-xs font-black uppercase tracking-[0.15em] rounded-full hover:bg-white hover:text-[#1a3f4e] hover:border-white hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all duration-300 group cursor-pointer"
+            >
+              <LucideIcon name="Calendar" size={14} className="group-hover:scale-110 transition-transform duration-500" />
+              {cleanBtnText(t(props.secondary_btn_text))}
+            </Link>
           )}
         </div>
       </div>

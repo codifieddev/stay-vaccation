@@ -131,4 +131,13 @@ body {
 .container-sv { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
 .font-display { font-family: 'Playfair Display', Georgia, serif; }
 
+/* ─── NO SCROLLBAR ──────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 /* Ensure admin panel styles remain unaffected */

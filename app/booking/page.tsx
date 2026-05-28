@@ -77,9 +77,9 @@ function BookingFormContent() {
 
   const liveMaxLimit = livePkg?.maxTravelersLimit;
   const liveAvailable = livePkg?.availableSeats;
-  const isSoldOut = liveMaxLimit !== undefined && liveAvailable !== undefined && liveAvailable <= 0;
+  const isSoldOut = typeof liveMaxLimit === 'number' && typeof liveAvailable === 'number' && liveAvailable <= 0;
   const totalOccupants = adults + children;
-  const isOverbooked = liveMaxLimit !== undefined && liveAvailable !== undefined && totalOccupants > liveAvailable;
+  const isOverbooked = typeof liveMaxLimit === 'number' && typeof liveAvailable === 'number' && totalOccupants > liveAvailable;
 
   const isFormValid = name.trim() && email.trim() && phone.trim() && travelDate;
 
@@ -277,7 +277,7 @@ function BookingFormContent() {
 
           <h2 className="font-['Poppins'] font-black text-[#1a3f4e] text-3xl mb-3 tracking-tight">Booking Confirmed!</h2>
           <p className="text-gray-500 text-sm mb-8 leading-relaxed max-w-sm mx-auto font-medium">
-            Your premium journey is secured. We have sent the confirmation details to <strong className="text-gray-805">{email}</strong>.
+            Your premium journey is secured. We have sent the confirmation details to <strong className="text-gray-805 break-all">{email}</strong>.
           </p>
 
           <div className="bg-[#f8f9fa] rounded-2xl p-6 border border-gray-100 mb-8 inline-block w-full text-left space-y-4">
@@ -288,9 +288,9 @@ function BookingFormContent() {
               </span>
             </div>
             
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-4">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Destination</span>
-              <span className="text-xs font-bold text-[#1a3f4e]">{destination}</span>
+              <span className="text-xs font-bold text-[#1a3f4e] truncate max-w-[200px]" title={destination}>{destination}</span>
             </div>
             
             <div className="flex justify-between items-center">
@@ -333,14 +333,14 @@ function BookingFormContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pt-8 pb-20">
+    <div className="min-h-screen bg-[#f8f9fa] pt-24 sm:pt-28 md:pt-32 pb-20">
       <div className="container-sv mx-auto px-4 max-w-6xl">
         
         {/* Header Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-6">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-gray-400 mb-6">
           <span className="cursor-pointer hover:text-gray-600" onClick={() => router.push("/packages")}>Packages</span>
           <span className="text-gray-300">/</span>
-          <span className="text-gray-600 font-extrabold truncate max-w-[200px]">{packageName}</span>
+          <span className="text-gray-600 font-extrabold inline-block truncate max-w-[140px] sm:max-w-[280px] md:max-w-[400px] align-bottom" title={packageName}>{packageName}</span>
           <span className="text-gray-300">/</span>
           <span className="text-orange-500 font-black uppercase">Secure Booking</span>
         </div>
@@ -389,7 +389,7 @@ function BookingFormContent() {
           <form onSubmit={handleBookingSubmit} className="space-y-6">
             
             {/* Guest Details Card */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-6">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-full bg-[#e8f4fd] flex items-center justify-center text-[#4a90e2]">
                   <LucideIcon name="User" size={16} />
@@ -450,7 +450,7 @@ function BookingFormContent() {
             </div>
 
             {/* Travel details Card */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-6">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center text-[#ff6b00]">
                   <LucideIcon name="Calendar" size={16} />
@@ -537,7 +537,7 @@ function BookingFormContent() {
             </div>
 
             {/* Special Request Notes Card */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-4">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.02)] space-y-4">
               <div className="flex items-center gap-3 pb-2">
                 <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
                   <LucideIcon name="MessageSquare" size={16} />
@@ -571,7 +571,7 @@ function BookingFormContent() {
             <div className="bg-white rounded-[2rem] shadow-[0_20px_45px_rgba(15,23,42,0.06)] border border-gray-100 overflow-hidden">
               
               {/* Package Header Panel */}
-              <div className="p-6 md:p-8 bg-gray-50/60 border-b border-gray-100 space-y-3">
+              <div className="p-4 sm:p-6 md:p-8 bg-gray-50/60 border-b border-gray-100 space-y-3">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-orange-500 rounded-full border border-orange-100 shadow-sm text-[9px] font-black uppercase tracking-wider">
                   📍 {destination}
                 </span>
@@ -584,7 +584,7 @@ function BookingFormContent() {
               </div>
 
               {/* Price Breakdown Details */}
-              <div className="p-6 md:p-8 space-y-4">
+              <div className="p-4 sm:p-6 md:p-8 space-y-4">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pb-2">Price Breakdown</h4>
 
                 <div className="flex justify-between items-center text-xs font-bold text-gray-600">

@@ -418,22 +418,56 @@ export const ImageUploader = ({ images = [], onAdd, onRemove, label = "Images" }
     const files = Array.from(e.target.files || []) as File[];
 
     for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "aventara");
+        console.log("[ImageUploader] Uploading to local API...", file.name);
 
-      const res = await fetch(
-        "https://api.cloudinary.com/v1_1/dpq1lw5zb/image/upload",
-        {
+        const res = await fetch("/api/upload", {
           method: "POST",
-          body: formData
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.url) {
+            console.log("[ImageUploader] Local upload success:", data.url);
+            onAdd(data.url);
+            continue; // Go to next file
+          }
         }
-      );
 
-      const data = await res.json();
+        // If local API fails, fall back to Cloudinary
+        console.warn("[ImageUploader] Local upload failed, attempting Cloudinary upload...");
 
-      onAdd(data.secure_url);
+        const cloudinaryData = new FormData();
+        cloudinaryData.append("file", file);
+        cloudinaryData.append("upload_preset", "aventara");
+
+        const cloudRes = await fetch(
+          "https://api.cloudinary.com/v1_1/dpq1lw5zb/image/upload",
+          {
+            method: "POST",
+            body: cloudinaryData
+          }
+        );
+
+        if (!cloudRes.ok) {
+          throw new Error("Both local upload and Cloudinary upload failed.");
+        }
+
+        const cloudData = await cloudRes.json();
+        if (cloudData.secure_url) {
+          console.log("[ImageUploader] Cloudinary upload success:", cloudData.secure_url);
+          onAdd(cloudData.secure_url);
+        } else {
+          throw new Error("No URL returned from Cloudinary response.");
+        }
+      } catch (err) {
+        console.error("[ImageUploader] Upload error:", err);
+        alert(`Failed to upload image: ${err instanceof Error ? err.message : String(err)}. Please try pasting an online image URL directly into the input box instead.`);
+      }
     }
 
     e.target.value = "";
@@ -1067,7 +1101,7 @@ export const QuickPackageBuilder = ({ onAdd }: { onAdd: (p: Package) => void }) 
   // Implementation...
 };
 
-const ActivityPicker = ({ dayAct, dayId, onUpdate, onRemove }) => {
+const ActivityPicker = ({ dayAct, dayId, onUpdate, onRemove, setItinerary }) => {
   const { masterActivities } = useAppSelector(state => state.activities);
   const [open, setOpen] = useState(true);
   const resolved = resolveActivity(dayAct, masterActivities);
@@ -1120,6 +1154,35 @@ const ActivityPicker = ({ dayAct, dayId, onUpdate, onRemove }) => {
           <div className="flex items-center gap-6 pt-1 border-t border-gray-100">
             <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600 font-medium"><input type="checkbox" className="w-3.5 h-3.5 rounded accent-blue-900" checked={dayAct.guideIncluded} onChange={e => upd("guideIncluded", e.target.checked)} />Guide Included</label>
             <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600 font-medium"><input type="checkbox" className="w-3.5 h-3.5 rounded accent-blue-900" checked={dayAct.ticketIncluded} onChange={e => upd("ticketIncluded", e.target.checked)} />Ticket Included</label>
+          </div>
+          
+          <div className="pt-3 border-t border-gray-100">
+            <FL optional>Activity Images (Multiple)</FL>
+            <ImageUploader
+              images={dayAct.customImages || []}
+              onAdd={url => {
+                setItinerary(p => p.map(d => d.id === dayId ? {
+                  ...d,
+                  activities: d.activities.map(a => a.id === dayAct.id ? {
+                    ...a,
+                    customImages: [...(a.customImages || []), url].filter(Boolean)
+                  } : a)
+                } : d));
+              }}
+              onRemove={i => {
+                setItinerary(p => p.map(d => d.id === dayId ? {
+                  ...d,
+                  activities: d.activities.map(a => a.id === dayAct.id ? {
+                    ...a,
+                    customImages: (a.customImages || []).filter((_, j) => j !== i)
+                  } : a)
+                } : d));
+              }}
+              label="Upload Activity Images"
+            />
+            <p className="text-[10px] text-gray-400 italic mt-2 flex items-center gap-1">
+              <Ic.Info /> Add custom photos showing this specific activity experience.
+            </p>
           </div>
         </div>
       )}
@@ -1652,7 +1715,7 @@ const ItineraryBuilder = ({ itinerary, setItinerary }) => {
                   </div>
                   {day.activities.length === 0 && <p className="text-xs text-center text-gray-400 py-4 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/30">Click &quot;Add Activity&quot; to link from master catalog</p>}
 
-                  <div className="space-y-2">{day.activities.map(act => <ActivityPicker key={act.id} dayAct={act} dayId={day.id} onUpdate={updateAct} onRemove={removeAct} />)}</div>
+                  <div className="space-y-2">{day.activities.map(act => <ActivityPicker key={act.id} dayAct={act} dayId={day.id} onUpdate={updateAct} onRemove={removeAct} setItinerary={setItinerary} />)}</div>
                 </div>
               </div>
             )}
@@ -2462,21 +2525,24 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
         </div>
         <div className="space-y-6">
           <div>
-            <FL required>Hero / Cover Image</FL>
+            <FL required>Hero / Cover Images (Multiple)</FL>
             <div className="space-y-3">
-              <Inp
-                placeholder="Enter cover image URL…"
-                value={form.coverImage || ""}
-                onChange={e => upd("coverImage", e.target.value)}
-              />
               <ImageUploader
-                images={form.coverImage ? [form.coverImage] : []}
-                onAdd={url => upd("coverImage", url)}
-                onRemove={() => upd("coverImage", "")}
-                label="Upload Cover Image"
+                images={form.coverImages || (form.coverImage ? [form.coverImage] : [])}
+                onAdd={url => setForm(p => {
+                  const current = p.coverImages || (p.coverImage ? [p.coverImage] : []);
+                  const updated = [...current, url].filter(Boolean);
+                  return { ...p, coverImages: updated, coverImage: updated[0] || "" };
+                })}
+                onRemove={i => setForm(p => {
+                  const current = p.coverImages || (p.coverImage ? [p.coverImage] : []);
+                  const updated = current.filter((_, j) => j !== i);
+                  return { ...p, coverImages: updated, coverImage: updated[0] || "" };
+                })}
+                label="Upload Cover Images"
               />
               <p className="text-[10px] text-gray-400 italic flex items-center gap-1">
-                <Ic.Info /> This image appears at the top of the package detail page and on search cards. Recommended: 1920x800px.
+                <Ic.Info /> These images appear at the top of the package detail page and on search cards. Recommended: 1920x800px.
               </p>
             </div>
           </div>
@@ -2485,8 +2551,16 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
             <FL>Image Gallery</FL>
             <ImageUploader
               images={form.images || []}
-              onAdd={url => upd("images", [...(form.images || []), url])}
-              onRemove={i => upd("images", (form.images || []).filter((_, j) => j !== i))}
+              onAdd={url => setForm(p => {
+                const current = p.images || [];
+                const updated = [...current, url].filter(Boolean);
+                return { ...p, images: updated };
+              })}
+              onRemove={i => setForm(p => {
+                const current = p.images || [];
+                const updated = current.filter((_, j) => j !== i);
+                return { ...p, images: updated };
+              })}
               label="Upload Gallery Images"
             />
             <p className="text-[10px] text-gray-400 italic mt-2 flex items-center gap-1">
@@ -2498,7 +2572,26 @@ export const PackageForm = ({ initial, onSave, onCancel, mode }) => {
 
       <div className="flex justify-end gap-3">
         <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
-        <Btn variant="success" onClick={() => onSave({ ...form, itinerary, faqs, inclusions, exclusions, knowBeforeYouGo, additionalInfo })}>
+        <Btn variant="success" onClick={() => {
+          const cleanCoverImages = Array.isArray(form.coverImages)
+            ? form.coverImages.filter((url: any) => typeof url === 'string' && url.trim())
+            : (form.coverImage ? [form.coverImage] : []);
+          const cleanImages = Array.isArray(form.images)
+            ? form.images.filter((url: any) => typeof url === 'string' && url.trim())
+            : [];
+          onSave({
+            ...form,
+            coverImages: cleanCoverImages,
+            coverImage: cleanCoverImages[0] || "",
+            images: cleanImages,
+            itinerary,
+            faqs,
+            inclusions,
+            exclusions,
+            knowBeforeYouGo,
+            additionalInfo
+          });
+        }}>
           {mode === "create" ? "✓ Create Package" : "✓ Save Changes"}
         </Btn>
       </div>

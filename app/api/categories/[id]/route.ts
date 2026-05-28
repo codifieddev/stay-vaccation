@@ -17,10 +17,17 @@ export async function PUT(
     // Remove _id from body to avoid trying to update the immutable _id field
     const { _id, ...updateData } = body;
     
-    const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id;
+    const idQuery = {
+      _id: {
+        $in: [
+          id,
+          ObjectId.isValid(id) ? new ObjectId(id) : null
+        ].filter(Boolean) as any
+      }
+    };
 
     await db.collection("categories").updateOne(
-      { _id: queryId as any },
+      idQuery,
       {
         $set: {
           ...updateData,
@@ -29,7 +36,13 @@ export async function PUT(
       }
     );
 
-    return NextResponse.json({ success: true });
+    const updatedCategory = {
+      _id: id,
+      ...updateData,
+      updatedAt: new Date(),
+    };
+
+    return NextResponse.json({ success: true, data: updatedCategory });
   } catch (err) {
     console.error("CATEGORY PUT ERROR:", err);
     return NextResponse.json({ success: false }, { status: 500 });
@@ -46,9 +59,16 @@ export async function DELETE(
     if (!id) return NextResponse.json({ success: false, message: "Missing id" }, { status: 400 });
 
     const db = await getDatabase();
-    const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id;
+    const idQuery = {
+      _id: {
+        $in: [
+          id,
+          ObjectId.isValid(id) ? new ObjectId(id) : null
+        ].filter(Boolean) as any
+      }
+    };
 
-    const result = await db.collection("categories").deleteOne({ _id: queryId as any });
+    const result = await db.collection("categories").deleteOne(idQuery);
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });

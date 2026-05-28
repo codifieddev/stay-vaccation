@@ -2,7 +2,8 @@
 import React from 'react';
 import Link from 'next/link';
 import LucideIcon from '../components/LucideIcon';
-
+import { getCategoryFallbackImage, getCategoryIcon } from '../utils/categoryMapping';
+ 
 interface CategoryCardV2Props {
   cat: {
     _id: string;
@@ -35,7 +36,7 @@ const CategoryCardV2: React.FC<CategoryCardV2Props> = ({ cat, index = 0 }) => {
     >
       <div className="cat-img-wrap" style={{ height: '100%', width: '100%' }}>
         <img
-          src={cat.image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80'}
+          src={cat.image || getCategoryFallbackImage(cat.name)}
           alt={cat.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -67,7 +68,7 @@ const CategoryCardV2: React.FC<CategoryCardV2Props> = ({ cat, index = 0 }) => {
           marginBottom: '1rem',
           border: '1px solid rgba(255,255,255,0.3)'
         }}>
-          <LucideIcon name={cat.icon || 'Globe'} size={20} />
+          <LucideIcon name={getCategoryIcon(cat.name, cat.icon)} size={20} />
         </div>
 
         <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: '1.4rem', color: '#fff', marginBottom: '0.4rem' }}>

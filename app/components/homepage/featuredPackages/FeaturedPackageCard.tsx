@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Package } from "./featuredPackages.types";
 import { ratingStyles, durationStyles, categoryStyles, bookBtnStyles } from "./featuredPackages.styles";
+import { useCurrency } from "@/app/hooks/useCurrency";
 
 interface FeaturedPackageCardProps {
   pkg: Package;
@@ -12,11 +13,7 @@ interface FeaturedPackageCardProps {
 }
 
 export default function FeaturedPackageCard({ pkg, index = 0 }: FeaturedPackageCardProps) {
-  // Format price helper
-  const formatPrice = (amount: number, currency: string) => {
-    const sym = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ" }[currency] || currency;
-    return `${sym}${amount.toLocaleString()}`;
-  };
+  const { formatPrice } = useCurrency();
 
   const hasDiscount = pkg.price?.originalAmount && pkg.price.originalAmount > pkg.price.amount;
   const savings = hasDiscount ? pkg.price.originalAmount! - pkg.price.amount : 0;

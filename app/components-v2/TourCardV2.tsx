@@ -12,6 +12,7 @@ interface TourCardV2Props {
     name?: string;
     title?: string;
     image?: string;
+    coverImage?: string;
     images?: string[];
     rating?: number;
     reviewCount?: number;
@@ -39,21 +40,22 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
 
   const id = pkg.id || pkg._id;
   const name = pkg.title || pkg.name || 'Premium Experience';
-  const image = !imgFailed && (pkg.image || pkg.images?.[0]) 
-    ? (pkg.image || pkg.images?.[0]) 
+  const image = !imgFailed && (pkg.coverImage || pkg.image || pkg.images?.[0]) 
+    ? (pkg.coverImage || pkg.image || pkg.images?.[0]) 
     : 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&auto=format&fit=crop&q=80';
   
   const category = pkg.category || pkg.tourType || pkg.travelStyle || 'Adventure';
   const duration = pkg.duration || pkg.tripDuration || 'Flexible';
   
   const baseAmount = Number(pkg.price?.amount) || Number(pkg.price) || 0;
-  const currentPrice = convert(baseAmount, "INR");
+  const baseCurrency = pkg.price?.currency || "INR";
+  const currentPrice = convert(baseAmount, baseCurrency);
   
   const slug = pkg.slug || id;
   const location = pkg.destination || 'Global';
   const shortDesc = pkg.shortDescription || 'Embark on an unforgettable journey to discover gorgeous landscapes, vibrant cultures, and hidden treasures.';
 
-  const isSoldOut = pkg.maxTravelersLimit !== undefined && pkg.availableSeats !== undefined && pkg.availableSeats <= 0;
+  const isSoldOut = typeof pkg.maxTravelersLimit === 'number' && typeof pkg.availableSeats === 'number' && pkg.availableSeats <= 0;
 
   return (
     <article 
@@ -156,26 +158,13 @@ const TourCardV2: React.FC<TourCardV2Props> = ({ pkg, index = 0 }) => {
             </div>
           </div>
 
-          {/* Book Now Button */}
-          {isSoldOut ? (
-            <button 
-              disabled
-              className="inline-flex items-center justify-center px-4 py-2.5 bg-gray-300 text-gray-500 text-xs font-black uppercase tracking-wider rounded-xl cursor-not-allowed"
-            >
-              Sold Out
-            </button>
-          ) : (
-            <Link 
-              href={
-                user 
-                  ? `/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`
-                  : `/login?from=${encodeURIComponent(`/booking?packageId=${id}&packageName=${encodeURIComponent(name)}&price=${baseAmount}&duration=${encodeURIComponent(duration)}&destination=${encodeURIComponent(location)}&currency=${encodeURIComponent(pkg.price?.currency || 'INR')}`)}`
-              } 
-              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(255,149,0,0.15)] hover:shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:-translate-y-0.5"
-            >
-              Book Now
-            </Link>
-          )}
+          {/* View Package Button */}
+          <Link 
+            href={`/packages/${slug}`}
+            className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#ff9500] to-[#ff6b00] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(255,149,0,0.15)] hover:shadow-[0_6px_20px_rgba(255,149,0,0.3)] hover:-translate-y-0.5"
+          >
+            View Package
+          </Link>
         </div>
       </div>
     </article>

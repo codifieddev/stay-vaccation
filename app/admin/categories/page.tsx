@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Card, Btn, Ic, cls, CategoryForm, Category } from "../../components/AdminCore";
 import LucideIcon from "@/app/components/LucideIcon";
+import { getCategoryIcon } from "@/app/utils/categoryMapping";
 
 import { useAppDispatch, useAppSelector } from "@/app/store/hooks";
 import { createCategory, updateCategory, deleteCategory } from "@/app/store/features/categories/categoryThunks";
@@ -86,7 +87,7 @@ export default function CategoriesPage() {
                 <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
               )}
               <div className="relative z-10 scale-110 group-hover:scale-125 transition-transform duration-500 opacity-90 text-white">
-                <LucideIcon name={cat.icon} size={40} strokeWidth={1.5} />
+                <LucideIcon name={getCategoryIcon(cat.name, cat.icon)} size={40} strokeWidth={1.5} />
               </div>
               <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
                 <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white">

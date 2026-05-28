@@ -54,9 +54,16 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
+    const newCategory = {
+      _id: result.insertedId.toString(),
+      ...insertData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     return NextResponse.json({
       success: true,
-      insertedId: result.insertedId.toString(),
+      data: newCategory,
     });
   } catch (err) {
     console.error("CATEGORY POST ERROR:", err);

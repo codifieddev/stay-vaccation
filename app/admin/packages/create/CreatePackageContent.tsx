@@ -29,6 +29,9 @@ const emptyPackage = () => ({
   },
   faqs: [],
   itinerary: [],
+  coverImage: "",
+  coverImages: [],
+  images: [],
 });
 
 import { useAppDispatch } from "@/app/store/hooks";

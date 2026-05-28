@@ -59,7 +59,7 @@ export default async function HomePage() {
   const v2Packages = packages.map((pkg: any) => ({
     id: pkg.id || pkg._id,
     name: pkg.name,
-    image: pkg.images?.[0] || pkg.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
+    image: pkg.coverImage || pkg.images?.[0] || pkg.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80',
     rating: pkg.rating || 4.8,
     reviewCount: pkg.reviews || 0,
     category: pkg.categoryName || 'Tour',
@@ -73,11 +73,14 @@ export default async function HomePage() {
   const v2Destinations = destinations.map((dest: any) => ({
     id: dest.slug,
     name: dest.name,
+    slug: dest.slug,
     image: dest.image || 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&auto=format&fit=crop&q=80',
     rating: dest.rating || 4.9,
     price: dest.startingPrice,
     tag: dest.isPopular ? '🏆 Most Popular' : undefined,
-    category: dest.type || 'Escape'
+    category: dest.type || 'Escape',
+    packageCount: dest.packageCount || 0,
+    displayOrder: dest.displayOrder !== undefined ? dest.displayOrder : 999
   }));
 
   // Find the sections in settings

@@ -19,11 +19,12 @@ export default function BestSellerCard({ pkg, index }: BestSellerCardProps) {
   const baseAmount = pkg.price.amount || 0;
   const baseOriginalAmount = pkg.price.originalAmount || 0;
   
-  const currentPrice = convert(baseAmount, "INR");
-  const originalPrice = convert(baseOriginalAmount, "INR");
+  const baseCurrency = pkg.price?.currency || "INR";
+  const currentPrice = convert(baseAmount, baseCurrency);
+  const originalPrice = convert(baseOriginalAmount, baseCurrency);
   const hasDiscount = originalPrice.amount > currentPrice.amount;
   
-  const featuredImage = pkg.images?.[0] || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop";
+  const featuredImage = pkg.coverImage || pkg.images?.[0] || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop";
 
   return (
     <div 
